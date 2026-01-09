@@ -525,8 +525,9 @@ void Selection::center()
 
 void Selection::drop()
 {
-    this->move_to_center(Vec3d(0, 0, -this->get_bounding_box().min.z()));
-    wxGetApp().plater()->get_view3D_canvas3D()->do_move(L("Move Object"));
+    this->ensure_on_bed();
+    //this->move_to_center(Vec3d(0, 0, -this->get_bounding_box().min.z()));
+    //wxGetApp().plater()->get_view3D_canvas3D()->do_move(L("Move Object"));
 }
 
 void Selection::center_plate(const int plate_idx) {
@@ -571,6 +572,33 @@ void Selection::set_printable(bool printable)
 
         //update printable state on canvas
         wxGetApp().plater()->canvas3D()->update_instance_printable_state_for_object((size_t)i.first);
+    }
+
+    // update scene
+    wxGetApp().plater()->update();
+}
+
+void Selection::set_auto_drop(bool enabled)
+{
+    if (!m_valid)
+        return;
+
+    std::set<std::pair<int, int>> instances_idxs;
+    for (ObjectIdxsToInstanceIdxsMap::iterator obj_it = m_cache.content.begin(); obj_it != m_cache.content.end(); ++obj_it) {
+        for (InstanceIdxsList::reverse_iterator inst_it = obj_it->second.rbegin(); inst_it != obj_it->second.rend(); ++inst_it) {
+            instances_idxs.insert(std::make_pair(obj_it->first, *inst_it));
+        }
+    }
+
+    std::string snapshot_text = (boost::format("%1%") % (enabled ? "Set Selection Snap to Buildplate Enabled" : "Set Selection Snap to Buildplate Disabled")).str();
+    wxGetApp().plater()->take_snapshot(snapshot_text);
+
+    // set auto_drop value for all instances in object
+    for (const std::pair<int, int>& i : instances_idxs) {
+        ModelObject* object = m_model->objects[i.first];
+        for (auto inst : object->instances)
+            inst->auto_drop = enabled;
+        wxGetApp().obj_list()->update_auto_drop_enabled(i.first, i.second);
     }
 
     // update scene
@@ -2924,8 +2952,11 @@ void Selection::synchronize_unselected_instances(SyncRotationType sync_rotation_
             }
             else if (sync_rotation_type != SyncRotationType::NONE || mirrored)
                 new_inst_trafo_j.linear() = (old_inst_trafo_j.linear() * old_inst_trafo_i.linear().inverse()) * curr_inst_trafo_i.linear();
-            if (wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() != ptSLA)
+
+            bool should_synchronize_z = m_model->objects[volume_j->object_idx()]->instances[volume_j->instance_idx()]->auto_drop == false;
+            if (should_synchronize_z && wxGetApp().preset_bundle->printers.get_edited_preset().printer_technology() != ptSLA)
                 new_inst_trafo_j.translation().z() = curr_inst_trafo_i.translation().z();
+
             assert(is_rotation_xy_synchronized(curr_inst_trafo_i, new_inst_trafo_j));
             volume_j->set_instance_transformation(new_inst_trafo_j);
             done.insert(j);
@@ -2964,15 +2995,18 @@ void Selection::synchronize_unselected_volumes()
 
 void Selection::ensure_on_bed()
 {
-    if (!m_model->get_ensure_on_bed()) {
-        return;
-    }
-
     typedef std::map<std::pair<int, int>, double> InstancesToZMap;
     InstancesToZMap instances_min_z;
 
     for (size_t i = 0; i < m_volumes->size(); ++i) {
-        GLVolume* volume = (*m_volumes)[i];
+        GLVolume* volume    = (*m_volumes)[i];
+        ModelObject*   mo   = m_model->objects[volume->object_idx()];
+        ModelInstance* mi   = mo->instances[volume->instance_idx()];
+
+        if (!mi->auto_drop) {
+            continue;
+        }
+
         if (!volume->is_wipe_tower && !volume->is_modifier &&
             std::find(m_cache.sinking_volumes.begin(), m_cache.sinking_volumes.end(), i) == m_cache.sinking_volumes.end()) {
             const double min_z = volume->transformed_convex_hull_bounding_box().min.z();

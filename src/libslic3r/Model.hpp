@@ -1251,6 +1251,7 @@ public:
     ModelInstanceEPrintVolumeState print_volume_state;
     // Whether or not this instance is printable
     bool printable;
+    bool auto_drop;
     bool use_loaded_id_for_label {false};
     int arrange_order = 0; // BBS
     size_t loaded_id = 0; // BBS
@@ -1690,9 +1691,6 @@ public:
     bool          is_fuzzy_skin_painted() const;
 
     std::unique_ptr<CalibPressureAdvancePattern> calib_pa_pattern;
-
-    bool get_ensure_on_bed() const;
-    void set_ensure_on_bed(bool enabled);
 
 private:
     explicit Model(int) : ObjectBase(-1)

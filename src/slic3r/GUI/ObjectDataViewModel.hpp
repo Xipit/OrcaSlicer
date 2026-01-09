@@ -56,6 +56,13 @@ enum PrintIndicator
     piUnprintable      ,    // unprintable
 };
 
+enum AutoDropIndicator
+{
+    adUndef         = 0,    // no ensure on bed indicator
+    adEnabled          ,    // ensure on bed enabled
+    adDisabled         ,    // ensure on bed disabled
+};
+
 enum VaryHeightIndicator
 {
     hiUnVariable,    // unvariable height
@@ -101,6 +108,8 @@ class ObjectDataViewModelNode
     wxBitmap                        m_sinking_icon;
     PrintIndicator                  m_printable {piUndef};
     wxBitmap                        m_printable_icon;
+    AutoDropIndicator               m_auto_drop {adUndef};
+    wxBitmap                        m_auto_drop_icon;
 
     VaryHeightIndicator             m_variable_height{ hiUnVariable };
     wxBitmap				        m_variable_height_icon;
@@ -241,7 +250,7 @@ public:
     void            SetExtruder(const wxString &extruder) { m_extruder = extruder; }
     void            SetWarningIconName(const std::string& warning_icon_name) { m_warning_icon_name = warning_icon_name; }
     void            SetLock(bool has_lock)                                   { m_has_lock = has_lock; }
-    const wxBitmap& GetBitmap() const         { return m_bmp; }
+    const wxBitmap& GetBitmap() const               { return m_bmp; }
     const wxString& GetName() const                 { return m_name; }
     ItemType        GetType() const                 { return m_type; }
     InfoItemType    GetInfoItemType() const         { return m_info_item_type; }
@@ -249,16 +258,17 @@ public:
 	int             GetIdx() const                  { return m_idx; }
     //BBS: add part plate related logic
     void            SetPlateIdx(const int& idx);
-    int             GetPlateIdx() const { return m_plate_idx; }
+    int             GetPlateIdx() const             { return m_plate_idx; }
     ModelVolumeType GetVolumeType()                 { return m_volume_type; }
 	t_layer_height_range    GetLayerRange() const   { return m_layer_range; }
     wxString        GetExtruder()                   { return m_extruder; }
     PrintIndicator  IsPrintable() const             { return m_printable; }
-    VaryHeightIndicator  IsVaribaleHeight() const { return m_variable_height; }
+    AutoDropIndicator IsAutoDrop() const            { return m_auto_drop; }
+    VaryHeightIndicator  IsVaribaleHeight() const   { return m_variable_height; }
     // BBS
     bool            HasColorPainting() const        { return m_color_enable; }
-    bool            HasSupportPainting() const { return m_support_enable; }
-    bool            HasSinking() const { return m_sink_enable; }
+    bool            HasSupportPainting() const      { return m_support_enable; }
+    bool            HasSinking() const              { return m_sink_enable; }
     bool            IsActionEnabled() const         { return m_action_enable; }
     void            UpdateExtruderAndColorIcon(wxString extruder = "");
 
@@ -296,6 +306,7 @@ public:
     void        set_extruder_icon();
 	// Set printable icon for node
     void        set_printable_icon(PrintIndicator printable);
+    void        set_auto_drop_icon(AutoDropIndicator eob);
     void        set_variable_height_icon(VaryHeightIndicator vari_height);
     void        set_action_icon(bool enable);
     // BBS
@@ -493,8 +504,11 @@ public:
                                     const std::vector<std::string>& categories);
 
     bool    IsPrintable(const wxDataViewItem &item) const;
+    bool    IsAutoDrop(const wxDataViewItem& item) const;
     void    UpdateObjectPrintable(wxDataViewItem parent_item);
+    void    UpdateObjectAutoDrop(wxDataViewItem parent_item);
     void    UpdateInstancesPrintable(wxDataViewItem parent_item);
+    void    UpdateInstancesAutoDrop(wxDataViewItem parent_item);
     bool    IsVariableHeight(const wxDataViewItem& item) const;
 
     void    SetVolumeType(const wxDataViewItem &item, const Slic3r::ModelVolumeType type);
@@ -503,6 +517,8 @@ public:
                                       int subobj_idx = -1,
                                       ItemType subobj_type = itInstance);
     wxDataViewItem SetObjectPrintableState(PrintIndicator printable, wxDataViewItem obj_item);
+    wxDataViewItem  SetAutoDrop(AutoDropIndicator eob, int obj_idx, int subobj_idx = -1, ItemType subobj_type = itInstance);
+    wxDataViewItem  SetObjectAutoDrop(AutoDropIndicator eob, wxDataViewItem obj_item);
     wxDataViewItem SetObjectVariableHeightState(VaryHeightIndicator vari_height, wxDataViewItem obj_item);
     // BBS
     bool    IsColorPainted(wxDataViewItem& item) const;

@@ -2431,10 +2431,6 @@ void GLCanvas3D::delete_selected()
 
 void GLCanvas3D::ensure_on_bed(unsigned int object_idx, bool allow_negative_z)
 {
-    if (!m_model->get_ensure_on_bed()) {
-        return;
-    }
-
     //BBS if asseble view canvas
     if (m_canvas_type == ECanvasType::CanvasAssembleView) {
         return;
@@ -2447,6 +2443,13 @@ void GLCanvas3D::ensure_on_bed(unsigned int object_idx, bool allow_negative_z)
     InstancesToZMap instances_min_z;
 
     for (GLVolume* volume : m_volumes.volumes) {
+        ModelObject*   mo = m_model->objects[volume->object_idx()];
+        ModelInstance* mi = mo->instances[volume->instance_idx()];
+
+        if (!mi->auto_drop) {
+            continue;
+        }
+
         if (volume->object_idx() == (int)object_idx && !volume->is_modifier) {
             double min_z = volume->transformed_convex_hull_bounding_box().min.z();
             std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
@@ -4983,28 +4986,30 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
 
             // Move instances/volumes
             ModelObject* model_object = m_model->objects[object_idx];
-            if (model_object != nullptr) {
-                if (selection_mode == Selection::Instance) {
-                    if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
-                        if ((model_object->instances[instance_idx]->get_assemble_offset() - v->get_instance_offset()).norm() > 1e-2) {
-                            model_object->instances[instance_idx]->set_assemble_transformation(v->get_instance_transformation());
-                        }
-                    } else {
-                        model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
-                    }
-                }
-                else if (selection_mode == Selection::Volume) {
-                    auto cur_mv = model_object->volumes[volume_idx];
-                    if (cur_mv->get_transformation() != v->get_volume_transformation()) {
-                        cur_mv->set_transformation(v->get_volume_transformation());
-                        // BBS: backup
-                        Slic3r::save_object_mesh(*model_object);
-                    }
-                }
+            if (model_object == nullptr) 
+                continue;
 
-                object_moved = true;
-                model_object->invalidate_bounding_box();
+            if (selection_mode == Selection::Instance) {
+                if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
+                    if ((model_object->instances[instance_idx]->get_assemble_offset() - v->get_instance_offset()).norm() > 1e-2) {
+                        model_object->instances[instance_idx]->set_assemble_transformation(v->get_instance_transformation());
+                    }
+                } else {
+                    model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
+                }
             }
+            else if (selection_mode == Selection::Volume) {
+                auto cur_mv = model_object->volumes[volume_idx];
+                if (cur_mv->get_transformation() != v->get_volume_transformation()) {
+                    cur_mv->set_transformation(v->get_volume_transformation());
+                    // BBS: backup
+                    Slic3r::save_object_mesh(*model_object);
+                }
+            }
+
+            object_moved = true;
+            model_object->invalidate_bounding_box();
+            
         }
         else if (object_idx >= 1000 && object_idx < 1000 + n_plates) {
             // Move a wipe tower proxy.
@@ -5015,21 +5020,26 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
     //BBS: notify instance updates to part plater list
     m_selection.notify_instance_update(-1, 0);
 
-    if (m_model->get_ensure_on_bed()) {
-        // Fixes sinking/flying instances (snaps object to buildplate)
-        for (const std::pair<int, int>& i : done) {
-            ModelObject* m = m_model->objects[i.first];
-            const double shift_z = m->get_instance_min_z(i.second);
-            //BBS: don't call translate if the z is zero
-            if ((current_printer_technology() == ptSLA || shift_z > SINKING_Z_THRESHOLD) && (shift_z != 0.0f)) {
-                const Vec3d shift(0.0, 0.0, -shift_z);
-                m_selection.translate(i.first, i.second, shift);
-                m->translate_instance(i.second, shift);
-                //BBS: notify instance updates to part plater list
-                m_selection.notify_instance_update(i.first, i.second);
-            }
-            wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
+    // Fixes sinking/flying instances (snaps object to buildplate)
+    for (const std::pair<int, int>& i : done) {
+        ModelObject* mo = m_model->objects[i.first];
+        ModelInstance* mi  = mo->instances[i.second];
+            
+        // TODO find out where instances z position is linked for move/rotate/...
+        if (!mi->auto_drop) {
+            continue;
         }
+
+        const double shift_z = mo->get_instance_min_z(i.second);
+        //BBS: don't call translate if the z is zero
+        if ((current_printer_technology() == ptSLA || shift_z > SINKING_Z_THRESHOLD) && (shift_z != 0.0f)) {
+            const Vec3d shift(0.0, 0.0, -shift_z);
+            m_selection.translate(i.first, i.second, shift);
+            mo->translate_instance(i.second, shift);
+            //BBS: notify instance updates to part plater list
+            m_selection.notify_instance_update(i.first, i.second);
+        }
+        wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
     }
     
     //BBS: nofity object list to update
@@ -5105,41 +5115,48 @@ void GLCanvas3D::do_rotate(const std::string& snapshot_type)
 
         // Rotate instances/volumes.
         ModelObject* model_object = m_model->objects[object_idx];
-        if (model_object != nullptr) {
-            if (selection_mode == Selection::Instance) {
-                if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
-                    model_object->instances[instance_idx]->set_assemble_from_transform(v->get_instance_transformation().get_matrix());
-                } else {
-                    model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
-                }
+        if (model_object == nullptr)
+            continue;
+
+        if (selection_mode == Selection::Instance) {
+            if (m_canvas_type == GLCanvas3D::ECanvasType::CanvasAssembleView) {
+                model_object->instances[instance_idx]->set_assemble_from_transform(v->get_instance_transformation().get_matrix());
+            } else {
+                model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
             }
-            else if (selection_mode == Selection::Volume) {
-                auto cur_mv = model_object->volumes[volume_idx];
-                if (cur_mv->get_transformation() != v->get_volume_transformation()) {
-                    cur_mv->set_transformation(v->get_volume_transformation());
-                    // BBS: backup
-                    Slic3r::save_object_mesh(*model_object);
-                }
-            }
-            model_object->invalidate_bounding_box();
         }
+        else if (selection_mode == Selection::Volume) {
+            auto cur_mv = model_object->volumes[volume_idx];
+            if (cur_mv->get_transformation() != v->get_volume_transformation()) {
+                cur_mv->set_transformation(v->get_volume_transformation());
+                // BBS: backup
+                Slic3r::save_object_mesh(*model_object);
+            }
+        }
+        model_object->invalidate_bounding_box();
+        
     }
 
     //BBS: notify instance updates to part plater list
     m_selection.notify_instance_update(-1, -1);
 
-    if (m_model->get_ensure_on_bed() && m_canvas_type != CanvasAssembleView) {
+    if (m_canvas_type != CanvasAssembleView) {
         // Fixes sinking/flying instances (snaps object to buildplate)
         for (const std::pair<int, int> &i : done) {
-            ModelObject *m = m_model->objects[i.first];
+            ModelObject *mo = m_model->objects[i.first];
+            ModelInstance* mi = mo->instances[i.second];
+
+            if (!mi->auto_drop) {
+                continue;
+            }
 
             // BBS: don't call translate if the z is zero
-            const double shift_z = m->get_instance_min_z(i.second);
+            const double shift_z = mo->get_instance_min_z(i.second);
             // leave sinking instances as sinking
             if ((min_zs.find({i.first, i.second})->second >= SINKING_Z_THRESHOLD || shift_z > SINKING_Z_THRESHOLD) && (shift_z != 0.0f)) {
                 const Vec3d shift(0.0, 0.0, -shift_z);
                 m_selection.translate(i.first, i.second, shift);
-                m->translate_instance(i.second, shift);
+                mo->translate_instance(i.second, shift);
                 // BBS: notify instance updates to part plater list
                 m_selection.notify_instance_update(i.first, i.second);
             }
@@ -5194,43 +5211,48 @@ void GLCanvas3D::do_scale(const std::string& snapshot_type)
 
         // Rotate instances/volumes
         ModelObject* model_object = m_model->objects[object_idx];
-        if (model_object != nullptr) {
-            if (selection_mode == Selection::Instance) {
-                model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
-            }
-            else if (selection_mode == Selection::Volume) {
-                auto cur_mv = model_object->volumes[volume_idx];
-                if (cur_mv->get_transformation() != v->get_volume_transformation()) {
-                    model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
-                    cur_mv->set_transformation(v->get_volume_transformation());
-                    // BBS: backup
-                    Slic3r::save_object_mesh(*model_object);
-                }
-            }
-            model_object->invalidate_bounding_box();
+        if (model_object == nullptr)
+            continue;
+
+        if (selection_mode == Selection::Instance) {
+            model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
         }
+        else if (selection_mode == Selection::Volume) {
+            auto cur_mv = model_object->volumes[volume_idx];
+            if (cur_mv->get_transformation() != v->get_volume_transformation()) {
+                model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
+                cur_mv->set_transformation(v->get_volume_transformation());
+                // BBS: backup
+                Slic3r::save_object_mesh(*model_object);
+            }
+        }
+        model_object->invalidate_bounding_box();
+        
     }
 
     //BBS: notify instance updates to part plater list
     m_selection.notify_instance_update(-1, -1);
 
-    if (m_model->get_ensure_on_bed()) {
-        // Fixes sinking/flying instances (snaps object to buildplate)
-        for (const std::pair<int, int>& i : done) {
-            ModelObject* m = m_model->objects[i.first];
+    // Fixes sinking/flying instances (snaps object to buildplate)
+    for (const std::pair<int, int>& i : done) {
+        ModelObject* mo = m_model->objects[i.first];
+        ModelInstance* mi = mo->instances[i.second];
 
-            //BBS: don't call translate if the z is zero
-            double shift_z = m->get_instance_min_z(i.second);
-            // leave sinking instances as sinking
-            if ((min_zs.empty() || min_zs.find({ i.first, i.second })->second >= SINKING_Z_THRESHOLD || shift_z > SINKING_Z_THRESHOLD) && (shift_z != 0.0f)) {
-                Vec3d shift(0.0, 0.0, -shift_z);
-                m_selection.translate(i.first, i.second, shift);
-                m->translate_instance(i.second, shift);
-                //BBS: notify instance updates to part plater list
-                m_selection.notify_instance_update(i.first, i.second);
-            }
-            wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
+        if (!mi->auto_drop) {
+            continue;
         }
+
+        //BBS: don't call translate if the z is zero
+        double shift_z = mo->get_instance_min_z(i.second);
+        // leave sinking instances as sinking
+        if ((min_zs.empty() || min_zs.find({ i.first, i.second })->second >= SINKING_Z_THRESHOLD || shift_z > SINKING_Z_THRESHOLD) && (shift_z != 0.0f)) {
+            Vec3d shift(0.0, 0.0, -shift_z);
+            m_selection.translate(i.first, i.second, shift);
+            mo->translate_instance(i.second, shift);
+            //BBS: notify instance updates to part plater list
+            m_selection.notify_instance_update(i.first, i.second);
+        }
+        wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
     }
     
     //BBS: nofity object list to update
@@ -5302,49 +5324,55 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
 
         // Mirror instances/volumes
         ModelObject* model_object = m_model->objects[object_idx];
-        if (model_object != nullptr) {
-            if (selection_mode == Selection::Instance)
-                model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
-            else if (selection_mode == Selection::Volume) {
-                if (model_object->volumes[volume_idx]->get_transformation() != v->get_volume_transformation()) {
-                    model_object->volumes[volume_idx]->set_transformation(v->get_volume_transformation());
-                    // BBS: backup
-                    Slic3r::save_object_mesh(*model_object);
-                }
-            }
+        if (model_object == nullptr)
+            continue;
 
-            model_object->invalidate_bounding_box();
+        if (selection_mode == Selection::Instance)
+            model_object->instances[instance_idx]->set_transformation(v->get_instance_transformation());
+        else if (selection_mode == Selection::Volume) {
+            if (model_object->volumes[volume_idx]->get_transformation() != v->get_volume_transformation()) {
+                model_object->volumes[volume_idx]->set_transformation(v->get_volume_transformation());
+                // BBS: backup
+                Slic3r::save_object_mesh(*model_object);
+            }
         }
+
+        model_object->invalidate_bounding_box();
+        
     }
 
     //BBS: notify instance updates to part plater list
     m_selection.notify_instance_update(-1, -1);
 
-    if (m_model->get_ensure_on_bed()) {
-        // Fixes sinking/flying instances (snaps object to buildplate)
-        for (const std::pair<int, int>& i : done) {
-            ModelObject* m = m_model->objects[i.first];
+    // Fixes sinking/flying instances (snaps object to buildplate)
+    for (const std::pair<int, int>& i : done) {
+        ModelObject* mo = m_model->objects[i.first];
+        ModelInstance* mi = mo->instances[i.second];
 
-            //BBS: don't call translate if the z is zero
-            double shift_z = m->get_instance_min_z(i.second);
-            // leave sinking instances as sinking
-            if ((min_zs.empty() || min_zs.find({ i.first, i.second })->second >= SINKING_Z_THRESHOLD || shift_z > SINKING_Z_THRESHOLD)&&(shift_z != 0.0f)) {
-                Vec3d shift(0.0, 0.0, -shift_z);
-                m_selection.translate(i.first, i.second, shift);
-                m->translate_instance(i.second, shift);
-                //BBS: notify instance updates to part plater list
-                m_selection.notify_instance_update(i.first, i.second);
-            }
-            wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
-
-            //BBS: notify instance updates to part plater list
-            PartPlateList &plate_list = wxGetApp().plater()->get_partplate_list();
-            plate_list.notify_instance_update(i.first, i.second);
-
-            //BBS: nofity object list to update
-            wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();
+        if (!mi->auto_drop) {
+            continue;
         }
+
+        //BBS: don't call translate if the z is zero
+        double shift_z = mo->get_instance_min_z(i.second);
+        // leave sinking instances as sinking
+        if ((min_zs.empty() || min_zs.find({ i.first, i.second })->second >= SINKING_Z_THRESHOLD || shift_z > SINKING_Z_THRESHOLD)&&(shift_z != 0.0f)) {
+            Vec3d shift(0.0, 0.0, -shift_z);
+            m_selection.translate(i.first, i.second, shift);
+            mo->translate_instance(i.second, shift);
+            //BBS: notify instance updates to part plater list
+            m_selection.notify_instance_update(i.first, i.second);
+        }
+        wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
+
+        //BBS: notify instance updates to part plater list
+        PartPlateList &plate_list = wxGetApp().plater()->get_partplate_list();
+        plate_list.notify_instance_update(i.first, i.second);
+
+        //BBS: nofity object list to update
+        wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();
     }
+    
     
     //BBS: nofity object list to update
     wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();

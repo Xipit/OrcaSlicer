@@ -1745,6 +1745,8 @@ void ObjectList::key_event(wxKeyEvent& event)
         decrease_instances();
     else if (event.GetUnicodeKey() == 'p')
         toggle_printable_state();
+    else if (event.GetUnicodeKey() == 'd')
+        toggle_auto_drop_enabled();
     else if (filaments_count() > 1) {
         std::vector<wxChar> numbers = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
         wxChar key_char = event.GetUnicodeKey();
@@ -6368,6 +6370,70 @@ void ObjectList::toggle_printable_state()
 
     // update printable state on canvas
     wxGetApp().plater()->get_view3D_canvas3D()->update_instance_printable_state_for_objects(obj_idxs);
+
+    // update scene
+    wxGetApp().plater()->update();
+    wxGetApp().plater()->reload_paint_after_background_process_apply();
+}
+
+void ObjectList::update_auto_drop_enabled(int obj_idx, int instance_idx)
+{
+    ModelObject* object = (*m_objects)[obj_idx];
+
+    const AutoDropIndicator eob = object->instances[instance_idx]->auto_drop ? adEnabled : adDisabled;
+    if (object->instances.size() == 1)
+        instance_idx = -1;
+
+    m_objects_model->SetAutoDrop(eob, obj_idx, instance_idx);
+}
+
+void ObjectList::toggle_auto_drop_enabled()
+{
+    wxDataViewItemArray sels;
+    GetSelections(sels);
+    if (sels.IsEmpty())
+        return;
+
+    wxDataViewItem frst_item = sels[0];
+
+    ItemType type = m_objects_model->GetItemType(frst_item);
+    if (!(type & (itObject | itInstance)))
+        return;
+
+    int  obj_idx   = m_objects_model->GetObjectIdByItem(frst_item);
+    int  inst_idx  = type == itObject ? 0 : m_objects_model->GetInstanceIdByItem(frst_item);
+    bool enabled   = !object(obj_idx)->instances[inst_idx]->auto_drop;
+
+    take_snapshot("");
+
+    std::vector<size_t> obj_idxs;
+    for (auto item : sels) {
+        type = m_objects_model->GetItemType(item);
+        if (!(type & (itObject | itInstance)))
+            continue;
+
+        obj_idx          = m_objects_model->GetObjectIdByItem(item);
+        ModelObject* obj = object(obj_idx);
+
+        obj_idxs.emplace_back(static_cast<size_t>(obj_idx));
+
+        // set auto_drop value for selected instance/instances in object
+        if (type == itInstance) {
+            inst_idx = m_objects_model->GetInstanceIdByItem(item);
+            obj->instances[m_objects_model->GetInstanceIdByItem(item)]->auto_drop = enabled;
+        } else
+            for (auto inst : obj->instances)
+                inst->auto_drop = enabled;
+
+        // update auto_drop state in ObjectList
+        m_objects_model->SetObjectAutoDrop(enabled ? adEnabled : adDisabled, item);
+                
+        if (enabled) 
+            obj->ensure_on_bed();
+    }
+
+    sort(obj_idxs.begin(), obj_idxs.end());
+    obj_idxs.erase(unique(obj_idxs.begin(), obj_idxs.end()), obj_idxs.end());
 
     // update scene
     wxGetApp().plater()->update();

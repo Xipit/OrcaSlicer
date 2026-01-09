@@ -2178,7 +2178,7 @@ void MenuFactory::append_menu_item_set_printable(wxMenu* menu)
 void MenuFactory::append_menu_item_set_auto_drop(wxMenu* menu)
 {
     const Selection&    selection           = plater()->canvas3D()->get_selection();
-    bool                all_ensure_on_bed   = true;
+    bool                all_auto_drop   = true;
     ObjectList*         list                = obj_list();
     wxDataViewItemArray sels;
     list->GetSelections(sels);
@@ -2190,23 +2190,23 @@ void MenuFactory::append_menu_item_set_auto_drop(wxMenu* menu)
         else {
             int obj_idx  = list->GetModel()->GetObjectIdByItem(item);
             int inst_idx = type == itObject ? 0 : list->GetModel()->GetInstanceIdByItem(item);
-            all_ensure_on_bed &= list->object(obj_idx)->instances[inst_idx]->auto_drop;
+            all_auto_drop &= list->object(obj_idx)->instances[inst_idx]->auto_drop;
         }
     }
 
-    wxString menu_text = _L("Drop Automatically");
-    wxString menu_tooltip = _L("Automatically snaps the selected objects to the build plate");
+    wxString menu_text      = _L("Auto Drop");
+    wxString menu_tooltip   = _L("Automatically snaps the selected object to the build plate");
     wxMenuItem* menu_item_set_ensure_on_bed = append_menu_check_item(
         menu, wxID_ANY, menu_text, menu_tooltip,
-        [this, all_ensure_on_bed](wxCommandEvent&) {
+        [this, all_auto_drop](wxCommandEvent&) {
             Selection& selection = plater()->canvas3D()->get_selection();
-            selection.set_auto_drop(!all_ensure_on_bed);
+            selection.set_auto_drop(!all_auto_drop);
         },
         menu);
     m_parent->Bind(
         wxEVT_UPDATE_UI,
-        [all_ensure_on_bed](wxUpdateUIEvent& evt) {
-            evt.Check(all_ensure_on_bed);
+        [all_auto_drop](wxUpdateUIEvent& evt) {
+            evt.Check(all_auto_drop);
             plater()->set_current_canvas_as_dirty();
         },
         menu_item_set_ensure_on_bed->GetId());

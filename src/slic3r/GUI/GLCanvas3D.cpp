@@ -5134,7 +5134,6 @@ void GLCanvas3D::do_rotate(const std::string& snapshot_type)
             }
         }
         model_object->invalidate_bounding_box();
-        
     }
 
     //BBS: notify instance updates to part plater list
@@ -5164,6 +5163,7 @@ void GLCanvas3D::do_rotate(const std::string& snapshot_type)
             wxGetApp().obj_list()->update_info_items(static_cast<size_t>(i.first));
         }
     }
+
     //BBS: nofity object list to update
     wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();
 
@@ -5227,7 +5227,6 @@ void GLCanvas3D::do_scale(const std::string& snapshot_type)
             }
         }
         model_object->invalidate_bounding_box();
-        
     }
 
     //BBS: notify instance updates to part plater list
@@ -5338,7 +5337,6 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
         }
 
         model_object->invalidate_bounding_box();
-        
     }
 
     //BBS: notify instance updates to part plater list
@@ -5368,11 +5366,7 @@ void GLCanvas3D::do_mirror(const std::string& snapshot_type)
         //BBS: notify instance updates to part plater list
         PartPlateList &plate_list = wxGetApp().plater()->get_partplate_list();
         plate_list.notify_instance_update(i.first, i.second);
-
-        //BBS: nofity object list to update
-        wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();
-    }
-    
+    }    
     
     //BBS: nofity object list to update
     wxGetApp().plater()->sidebar().obj_list()->update_plate_values_for_items();

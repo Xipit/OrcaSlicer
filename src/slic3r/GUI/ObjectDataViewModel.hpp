@@ -58,9 +58,8 @@ enum PrintIndicator
 
 enum AutoDropIndicator
 {
-    adUndef         = 0,    // no ensure on bed indicator
-    adEnabled          ,    // ensure on bed enabled
-    adDisabled         ,    // ensure on bed disabled
+    adEnabled       = 1,    // auto_drop enabled
+    adDisabled      = 0,    // auto_drop disabled
 };
 
 enum VaryHeightIndicator
@@ -108,7 +107,7 @@ class ObjectDataViewModelNode
     wxBitmap                        m_sinking_icon;
     PrintIndicator                  m_printable {piUndef};
     wxBitmap                        m_printable_icon;
-    AutoDropIndicator               m_auto_drop {adUndef};
+    AutoDropIndicator               m_auto_drop {adEnabled};
     wxBitmap                        m_auto_drop_icon;
 
     VaryHeightIndicator             m_variable_height{ hiUnVariable };
@@ -306,7 +305,7 @@ public:
     void        set_extruder_icon();
 	// Set printable icon for node
     void        set_printable_icon(PrintIndicator printable);
-    void        set_auto_drop_icon(AutoDropIndicator eob);
+    void        set_auto_drop_icon(AutoDropIndicator ad);
     void        set_variable_height_icon(VaryHeightIndicator vari_height);
     void        set_action_icon(bool enable);
     // BBS
@@ -517,8 +516,8 @@ public:
                                       int subobj_idx = -1,
                                       ItemType subobj_type = itInstance);
     wxDataViewItem SetObjectPrintableState(PrintIndicator printable, wxDataViewItem obj_item);
-    wxDataViewItem  SetAutoDrop(AutoDropIndicator eob, int obj_idx, int subobj_idx = -1, ItemType subobj_type = itInstance);
-    wxDataViewItem  SetObjectAutoDrop(AutoDropIndicator eob, wxDataViewItem obj_item);
+    wxDataViewItem  SetAutoDrop(AutoDropIndicator ad, int obj_idx, int subobj_idx = -1, ItemType subobj_type = itInstance);
+    wxDataViewItem  SetObjectAutoDrop(AutoDropIndicator ad, wxDataViewItem obj_item);
     wxDataViewItem SetObjectVariableHeightState(VaryHeightIndicator vari_height, wxDataViewItem obj_item);
     // BBS
     bool    IsColorPainted(wxDataViewItem& item) const;

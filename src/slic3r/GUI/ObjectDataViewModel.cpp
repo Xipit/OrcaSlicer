@@ -178,7 +178,7 @@ bool ObjectDataViewModelNode::valid()
 void ObjectDataViewModelNode::sys_color_changed()
 {
     m_printable_icon = m_printable == piUndef ? m_empty_bmp : create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
-    m_auto_drop_icon = m_auto_drop == adUndef ? m_empty_bmp : create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
+    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 }
 
 void ObjectDataViewModelNode::set_icons()
@@ -210,14 +210,13 @@ void ObjectDataViewModelNode::set_printable_icon(PrintIndicator printable)
         m_empty_bmp : create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
 }
 
-void ObjectDataViewModelNode::set_auto_drop_icon(AutoDropIndicator eob)
+void ObjectDataViewModelNode::set_auto_drop_icon(AutoDropIndicator auto_drop)
 {
-    if (m_auto_drop == eob)
+    if (m_auto_drop == auto_drop)
         return;
 
-    m_auto_drop = eob;
-    m_auto_drop_icon = m_auto_drop == adUndef ?
-        m_empty_bmp : create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
+    m_auto_drop      = auto_drop;
+    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 }
 
 void ObjectDataViewModelNode::set_variable_height_icon(VaryHeightIndicator vari_height) {
@@ -324,8 +323,7 @@ void ObjectDataViewModelNode::msw_rescale()
     if (m_printable != piUndef)
         m_printable_icon = create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
 
-    if (m_auto_drop != adUndef)
-        m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
+    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 
     m_variable_height_icon = m_variable_height == hiUnVariable ? m_empty_bmp : create_scaled_bitmap("obj_variable_layer_height");
 
@@ -906,15 +904,15 @@ void ObjectDataViewModel::UpdateObjectAutoDrop(wxDataViewItem parent_item)
     ObjectDataViewModelNode* inst_root_node = static_cast<ObjectDataViewModelNode*>(inst_root_item.GetID());
 
     const size_t   child_cnt = inst_root_node->GetChildren().Count();
-    AutoDropIndicator obj_pi    = adDisabled;
+    AutoDropIndicator obj_ad    = adDisabled;
     for (size_t i = 0; i < child_cnt; i++)
         if (inst_root_node->GetNthChild(i)->IsAutoDrop() & adEnabled) {
-            obj_pi = adEnabled;
+            obj_ad = adEnabled;
             break;
         }
-    // and set auto drop state for object_node to adUndef
+    // and set auto drop state for object_node
     ObjectDataViewModelNode* obj_node = static_cast<ObjectDataViewModelNode*>(parent_item.GetID());
-    obj_node->set_auto_drop_icon(obj_pi);
+    obj_node->set_auto_drop_icon(obj_ad);
     ItemChanged(parent_item);
 }
 
@@ -926,15 +924,15 @@ void ObjectDataViewModel::UpdateInstancesAutoDrop(wxDataViewItem parent_item)
         return;
 
     ObjectDataViewModelNode* obj_node       = static_cast<ObjectDataViewModelNode*>(parent_item.GetID());
-    const AutoDropIndicator obj_eob      = obj_node->IsAutoDrop();
+    const AutoDropIndicator obj_ad      = obj_node->IsAutoDrop();
 
     ObjectDataViewModelNode* inst_root_node = static_cast<ObjectDataViewModelNode*>(inst_root_item.GetID());
     const size_t             child_cnt      = inst_root_node->GetChildren().Count();
 
     for (size_t i = 0; i < child_cnt; i++) {
         ObjectDataViewModelNode* inst_node = inst_root_node->GetNthChild(i);
-        // and set auto_drop for object_node to adUndef
-        inst_node->set_auto_drop_icon(obj_eob);
+        // and set auto_drop for object_node 
+        inst_node->set_auto_drop_icon(obj_ad);
         ItemChanged(wxDataViewItem((void*) inst_node));
     }
 }
@@ -2368,7 +2366,7 @@ wxDataViewItem ObjectDataViewModel::SetObjectPrintableState(
 }
 
 wxDataViewItem ObjectDataViewModel::SetAutoDrop(
-    AutoDropIndicator    eob,
+    AutoDropIndicator       ad,
     int                     obj_idx,
     int                     subobj_idx /* = -1*/,
     ItemType                subobj_type /* = itInstance*/)
@@ -2382,7 +2380,7 @@ wxDataViewItem ObjectDataViewModel::SetAutoDrop(
     ObjectDataViewModelNode* node = static_cast<ObjectDataViewModelNode*>(item.GetID());
     if (!node)
         return wxDataViewItem(0);
-    node->set_auto_drop_icon(eob);
+    node->set_auto_drop_icon(ad);
     ItemChanged(item);
 
     if (subobj_idx >= 0)
@@ -2391,12 +2389,12 @@ wxDataViewItem ObjectDataViewModel::SetAutoDrop(
     return item;
 }
 
-wxDataViewItem ObjectDataViewModel::SetObjectAutoDrop(AutoDropIndicator eob, wxDataViewItem obj_item)
+wxDataViewItem ObjectDataViewModel::SetObjectAutoDrop(AutoDropIndicator ad, wxDataViewItem obj_item)
 {
     ObjectDataViewModelNode* node = static_cast<ObjectDataViewModelNode*>(obj_item.GetID());
     if (!node)
         return wxDataViewItem(0);
-    node->set_auto_drop_icon(eob);
+    node->set_auto_drop_icon(ad);
     ItemChanged(obj_item);     
 
     UpdateInstancesAutoDrop(obj_item);

@@ -525,9 +525,32 @@ void Selection::center()
 
 void Selection::drop()
 {
-    this->ensure_on_bed();
-    //this->move_to_center(Vec3d(0, 0, -this->get_bounding_box().min.z()));
-    //wxGetApp().plater()->get_view3D_canvas3D()->do_move(L("Move Object"));
+    if (this->get_bounding_box().min.z() < SINKING_Z_THRESHOLD) {
+        return; // shouldnt happen, but better check anyways, already checked in append_menu_item_drop()
+    }
+
+    wxGetApp().plater()->take_snapshot(L("Move Object"));
+
+    this->move_to_center(Vec3d(0, 0, -this->get_bounding_box().min.z()));
+
+    for (unsigned int i : m_list) {
+        GLVolume&    volume = *(*m_volumes)[i];
+        ModelObject* model_object = m_model->objects[volume.object_idx()];
+
+        if (model_object != nullptr) {
+            if (m_mode == Volume) {
+                ModelVolume* cur_mv = model_object->volumes[volume.volume_idx()];
+                cur_mv->set_transformation(volume.get_volume_transformation());
+            } else if (m_mode == Instance) {
+                model_object->instances[volume.instance_idx()]->set_transformation(volume.get_instance_transformation());
+            }
+
+            model_object->invalidate_bounding_box();
+            this->notify_instance_update(volume.object_idx(), volume.instance_idx());
+        }
+    }
+
+    wxGetApp().plater()->get_view3D_canvas3D()->post_event(SimpleEvent(EVT_GLCANVAS_INSTANCE_MOVED));
 }
 
 void Selection::center_plate(const int plate_idx) {
@@ -3003,20 +3026,21 @@ void Selection::ensure_on_bed()
         ModelObject*   mo   = m_model->objects[volume->object_idx()];
         ModelInstance* mi   = mo->instances[volume->instance_idx()];
 
-        if (!mi->auto_drop) {
+        if (mi->auto_drop == false
+            || volume->is_wipe_tower 
+            || volume->is_modifier 
+            || std::find(m_cache.sinking_volumes.begin(), m_cache.sinking_volumes.end(), i) != m_cache.sinking_volumes.end()) 
+        {
             continue;
         }
 
-        if (!volume->is_wipe_tower && !volume->is_modifier &&
-            std::find(m_cache.sinking_volumes.begin(), m_cache.sinking_volumes.end(), i) == m_cache.sinking_volumes.end()) {
-            const double min_z = volume->transformed_convex_hull_bounding_box().min.z();
-            std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
-            InstancesToZMap::iterator it = instances_min_z.find(instance);
-            if (it == instances_min_z.end())
-                it = instances_min_z.insert(InstancesToZMap::value_type(instance, DBL_MAX)).first;
+        const double min_z = volume->transformed_convex_hull_bounding_box().min.z();
+        std::pair<int, int> instance = std::make_pair(volume->object_idx(), volume->instance_idx());
+        InstancesToZMap::iterator it = instances_min_z.find(instance);
+        if (it == instances_min_z.end())
+            it = instances_min_z.insert(InstancesToZMap::value_type(instance, DBL_MAX)).first;
 
-            it->second = std::min(it->second, min_z);
-        }
+        it->second = std::min(it->second, min_z);
     }
 
     for (GLVolume* volume : *m_volumes) {

@@ -8814,6 +8814,47 @@ void GLCanvas3D::_render_paint_toolbar() const
     ImGui::PopStyleColor();
 }
 
+float GLCanvas3D::_show_assembly_tooltip_information(float caption_max, float x, float y) const
+{
+    ImGuiWrapper *imgui     = wxGetApp().imgui();
+    ImTextureID normal_id = m_gizmos.get_icon_texture_id(GLGizmosManager::MENU_ICON_NAME::IC_TOOLBAR_TOOLTIP);
+    ImTextureID hover_id  = m_gizmos.get_icon_texture_id(GLGizmosManager::MENU_ICON_NAME::IC_TOOLBAR_TOOLTIP_HOVER);
+
+    caption_max += imgui->calc_text_size(": "sv).x + 35.f;
+
+    float  scale       = get_scale();
+    #ifdef WIN32
+        int dpi = get_dpi_for_window(wxGetApp().GetTopWindow());
+        scale *= (float) dpi / (float) DPI_DEFAULT;
+    #endif // WIN32
+    ImVec2 button_size = ImVec2(25 * scale, 25 * scale); // ORCA: Use exact resolution will prevent blur on icon
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, ImGui::GetStyle().FramePadding.y});
+    ImGui::ImageButton3(normal_id, hover_id, button_size);
+
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip2(ImVec2(x, y));
+        auto draw_text_with_caption = [&imgui, & caption_max](const wxString &caption, const wxString &text) {
+            imgui->text_colored(ImGuiWrapper::COL_ACTIVE, caption);
+            ImGui::SameLine(caption_max);
+            imgui->text_colored(ImGuiWrapper::COL_WINDOW_BG, text);
+        };
+
+        for (const auto &t : std::array<std::string, 3>{"object_selection", "part_selection", "number_key"}) {
+            draw_text_with_caption(m_assembly_view_desc.at(t + "_caption") + ": ", m_assembly_view_desc.at(t));
+        }
+        ImGui::EndTooltip();
+    }
+    ImGui::PopStyleVar(2);
+    auto same_line_size = button_size.x * 1.8;//with an space size
+    ImGui::SameLine(same_line_size);
+    same_line_size = imgui->calc_text_size("|"sv).x + same_line_size + imgui->calc_text_size("  "sv).x;
+    imgui->text_colored(ImGuiWrapper::COL_ACTIVE, "|");
+    ImGui::SameLine(same_line_size);
+    return same_line_size;
+}
+
 //BBS
 void GLCanvas3D::_render_assemble_control()
 {
@@ -9587,7 +9628,7 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
             warning += std::to_string(filament + 1);
             warning += " ";
         }
-        text  = (boost::format(_u8L("filaments %s cannot be printed directly on the surface of this plate.")) % warning).str();
+        text  = (boost::format(_u8L("Filaments %s cannot be printed directly on the surface of this plate.")) % warning).str();
         error = ErrorType::SLICING_ERROR;
         break;
     }

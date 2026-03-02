@@ -2697,6 +2697,18 @@ bool GUI_App::on_init_inner()
     g_object_set (gtk_settings_get_default (), "gtk-menu-images", TRUE, NULL);
 #endif
 
+#if defined(__WXGTK20__) || defined(__WXGTK3__)
+    // Suppress harmless GTK critical warnings from the GTK3/wxWidgets interaction.
+    // These include widget allocation on hidden widgets and events on unrealized widgets.
+    g_log_set_handler("Gtk", G_LOG_LEVEL_CRITICAL,
+        [](const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data) {
+            if (message && (strstr(message, "gtk_widget_set_allocation") ||
+                            strstr(message, "WIDGET_REALIZED_FOR_EVENT")))
+                return;
+            g_log_default_handler(log_domain, log_level, message, user_data);
+        }, nullptr);
+#endif
+
 #ifdef WIN32
     //BBS set crash log folder
     CBaseException::set_log_folder(data_dir());
@@ -5423,7 +5435,7 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
             }
 
             version_info.url           = prefer_release ? best_release_url : best_pre_url;
-            version_info.version_str   = prefer_release ? best_release.to_string_sf() : best_pre.to_string();
+            version_info.version_str   = prefer_release ? best_release.to_string_sf() : best_pre.to_string_sf();
             version_info.description   = prefer_release ? best_release_content : best_pre_content;
             version_info.force_upgrade = false;
 
@@ -5508,11 +5520,15 @@ bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
         }
         else if (msg == "unsigned_studio") {
             BOOST_LOG_TRIVIAL(info) << "process_network_msg, unsigned_studio";
-            MessageDialog msg_dlg(nullptr,
-                _L("Bambu Lab has implemented a signature verification check in their network plugin that restricts "
-                   "third-party software from communicating with your printer.\n\n"
-                   "As a result, some printing functions are unavailable in OrcaSlicer."),
-                _L("Network Plugin Restriction"), wxAPPLY | wxOK);
+            MessageDialog
+                msg_dlg(nullptr,
+                        _L("To use OrcaSlicer with Bambu Lab printers, you need to enable LAN mode and Developer mode on your printer.\n\n"
+                           "Please go to your printer's settings and:\n"
+                           "1. Turn on LAN mode\n"
+                           "2. Enable Developer mode\n\n"
+                           "Developer mode allows the printer to work exclusively through local network access, "
+                           "enabling full functionality with OrcaSlicer."),
+                        _L("Network Plugin Restriction"), wxAPPLY | wxOK);
             m_show_error_msgdlg = true;
             msg_dlg.ShowModal();
             m_show_error_msgdlg = false;

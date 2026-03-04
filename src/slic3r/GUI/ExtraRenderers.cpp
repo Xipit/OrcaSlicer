@@ -311,7 +311,7 @@ wxWindow* BitmapChoiceRenderer::CreateEditorCtrl(wxWindow* parent, wxRect labelR
     ::ComboBox *c_editor = new ::ComboBox(parent, wxID_ANY, wxEmptyString,
         labelRect.GetTopLeft(), wxSize(labelRect.GetWidth(), -1),
         0, nullptr, wxCB_READONLY | CB_NO_DROP_ICON | CB_NO_TEXT);
-    c_editor->GetDropDown().SetUseContentWidth(true, true);
+    c_editor->GetDropDown().SetUseContentWidth(true);
        
     if (has_default_extruder && has_default_extruder())
         c_editor->Append(_L("default"), *get_default_extruder_color_icon());

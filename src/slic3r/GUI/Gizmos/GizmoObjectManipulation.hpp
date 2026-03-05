@@ -143,9 +143,7 @@ public:
     bool reset_zero_button(ImGuiWrapper *imgui_wrapper, float caption_max, float unit_size, float space_size, float end_text_size);
     bool bbl_checkbox(const wxString &label, bool &value);
 
-    void show_move_tooltip_information(ImGuiWrapper *imgui_wrapper, float caption_max, float x, float y);
-    void show_rotate_tooltip_information(ImGuiWrapper *imgui_wrapper, float caption_max, float x, float y);
-    void show_scale_tooltip_information(ImGuiWrapper *imgui_wrapper, float caption_max, float x, float y);
+    void show_tooltip_information(ImGuiWrapper* imgui_wrapper, const std::map<std::string, wxString>& desc_source, const std::vector<std::string>& keys, float x, float y);
     void set_init_rotation(const Geometry::Transformation &value);
 
 private:

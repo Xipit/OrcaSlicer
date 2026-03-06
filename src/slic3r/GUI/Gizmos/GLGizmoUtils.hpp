@@ -18,7 +18,7 @@ namespace GLGizmoUtils {
 // Renders a tooltip button using the provided shortcuts
 void TooltipButton(
     ImGuiWrapper*                                       imgui_wrapper,
-    GLCanvas3D&                                         canvas,
+    const GLCanvas3D&                                   canvas,
     const std::vector<std::pair<wxString, wxString>>&   shortcuts,
     float                                               x,
     float                                               y

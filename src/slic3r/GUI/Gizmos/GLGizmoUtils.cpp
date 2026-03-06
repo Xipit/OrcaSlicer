@@ -15,18 +15,18 @@ namespace Slic3r::GUI::GLGizmoUtils {
 
 void TooltipButton(
     ImGuiWrapper*                                       imgui_wrapper,
-    GLCanvas3D&                                         canvas,
+    const GLCanvas3D&                                   canvas,
     const std::vector<std::pair<wxString, wxString>>&   shortcuts,
     float                                               x,
     float                                               y)
 {
 
-    float cur_y       = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
-    float caption_max = 0.f;
+    float caption_y       = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
+    float caption_x_max = 0.f;
     for (const auto& item : shortcuts) {
-        caption_max = std::max(caption_max, imgui_wrapper->calc_text_size(item.first).x);
+        caption_x_max = std::max(caption_x_max, imgui_wrapper->calc_text_size(item.first).x);
     }
-    caption_max += imgui_wrapper->calc_text_size(": "sv).x + 35.f;
+    caption_x_max += imgui_wrapper->calc_text_size(": "sv).x + 35.f;
 
     auto&       gizmos_manager = canvas.get_gizmos_manager();
     ImTextureID normal_id      = gizmos_manager.get_icon_texture_id(GLGizmosManager::MENU_ICON_NAME::IC_TOOLBAR_TOOLTIP);
@@ -46,10 +46,10 @@ void TooltipButton(
     ImGui::ImageButton3(normal_id, hover_id, button_size);
 
     if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip2(ImVec2(x, cur_y));
+        ImGui::BeginTooltip2(ImVec2(x, caption_y));
         for (const auto& item : shortcuts) {
             imgui_wrapper->text_colored(ImGuiWrapper::COL_ACTIVE, item.first + ": ");
-            ImGui::SameLine(caption_max);
+            ImGui::SameLine(caption_x_max);
             imgui_wrapper->text_colored(ImGuiWrapper::COL_WINDOW_BG, item.second);
         }
         ImGui::EndTooltip();

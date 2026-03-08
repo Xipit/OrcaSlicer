@@ -6,10 +6,32 @@
 #include <wx/app.h>
 #include <boost/algorithm/string.hpp>
 
-
 #ifdef WIN32
 #include <wx/msw/winundef.h>
 #endif
+
+/*
+    GizmoUI Footer Structure:
+
+    ~ Content ~
+    ----------------------------------------
+    [Button1] [Button2]
+    ----------------------------------------
+    [?]                   [Confirm] [Cancel]
+    ----------------------------------------
+    ~ Warnings ~
+
+    
+    Additional details:
+        - [Confirm], [Cancel], [Done], ... are buttons that close the Tool Dialog
+        - [Button1], ... are buttons that do not!
+        - Non-consequential buttons like [Cancel] and [Done] are always the right-most buttons
+        - Multiple warnings can show, but should only have one ImGui::Separator above
+        - If no warnings is shown, dont render the ImGui::Separator
+
+*/
+
+
 
 namespace Slic3r::GUI::GLGizmoUtils {
 
@@ -55,6 +77,32 @@ void TooltipButton(
         ImGui::EndTooltip();
     }
     ImGui::PopStyleVar(2);
+}
+
+void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxString>& labels)
+{
+    float       total_width = 0.0f;
+    ImGuiStyle& style       = ImGui::GetStyle();
+    float       spacing     = style.ItemSpacing.x;
+    float       padding     = style.FramePadding.x * 2.0f;
+
+    // Calculate width
+    for (size_t i = 0; i < labels.size(); ++i) {
+        total_width += imgui_wrapper->calc_text_size(labels[i]).x + padding;
+        if (i < labels.size() - 1)
+            total_width += spacing;
+    }
+
+    float avail = ImGui::GetContentRegionAvail().x;
+
+    // Handle Overlap: If the total width of the buttons exceeds available space, move to a new line
+    if (total_width > avail) {
+        ImGui::NewLine();
+        avail = ImGui::GetContentRegionAvail().x; // Reset to full window width
+    }
+
+    float posX = ImGui::GetCursorPosX() + std::max(0.0f, avail - total_width);
+    ImGui::SetCursorPosX(posX);
 }
 
 } // namespace Slic3r::GUI::GLGizmoUtils

@@ -99,24 +99,29 @@ void GLGizmoAssembly::on_render_input_window(float x, float y, float bottom_limi
     float moving_size = m_imgui->calc_text_size(_L("(Moving)")).x;
     float combox_content_size = m_imgui->calc_text_size(_L("Point and point assembly")).x*1.1 + ImGui::GetStyle().FramePadding.x * 18.0f;
     float caption_size = moving_size + 2 * m_space_size;
-    if (render_assembly_mode_combo(caption_size + 0.5 * m_space_size,  combox_content_size)) {
-        ;
-    }
+    render_assembly_mode_combo(caption_size + 0.5 * m_space_size,  combox_content_size);
     show_selection_ui();
     show_face_face_assembly_common();
+
     ImGui::Separator();
     show_face_face_assembly_senior();
     show_distance_xyz_ui();
-    render_input_window_warning(m_same_model_object);
+    
     ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
-
-    float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
-    ImGui::PopStyleVar(2);
+    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    render_input_window_warning(m_same_model_object);
+
+    ImGui::PopStyleVar(1);
 
     if (last_feature != m_curr_feature || last_mode != m_mode || last_selected_features != m_selected_features) {
         // the dialog may have changed its size, ask for an extra frame to render it properly
@@ -136,6 +141,7 @@ void GLGizmoAssembly::render_input_window_warning(bool same_model_object)
     if (wxGetApp().plater()->canvas3D()->get_canvas_type() == GLCanvas3D::ECanvasType::CanvasView3D) {
         if (m_hit_different_volumes.size() == 2) {
             if (same_model_object == false) {
+                ImGui::Separator();
                 m_imgui->warning_text(_L("Warning") + ": " +
                _L("It is recommended to assemble the objects first,\nbecause the objects is restriced to bed \nand only parts can be lifted."));
             }

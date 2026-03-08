@@ -37,7 +37,6 @@ bool GLGizmoFuzzySkin::on_init()
     const wxString shift = GUI::shortkey_shift_prefix();
 
     m_desc["reset_direction"]   = _L("Reset direction");
-    m_desc["cursor_type"]       = _L("Brush shape");
     m_desc["remove_all"]        = _L("Erase all painting");
     m_desc["circle"]            = _L("Circle");
     m_desc["sphere"]            = _L("Sphere");
@@ -46,7 +45,7 @@ bool GLGizmoFuzzySkin::on_init()
     m_desc["tool_brush"]        = _L("Brush");
     m_desc["tool_smart_fill"]   = _L("Smart fill");
     m_desc["clipping_of_view"]  = _L("Section view");
-    m_desc["cursor_size"]       = _L("Brush size");
+    m_desc["cursor_size"]       = _L("Pen size");
     m_desc["add_fuzzy_skin"]    = _L("Add fuzzy skin");
     m_desc["remove_fuzzy_skin"] = _L("Remove fuzzy skin");
     m_desc["smart_fill_angle"]  = _L("Smart fill angle");
@@ -304,18 +303,10 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
 
     ImGui::Separator();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    TooltipButton(x, y);
-
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
-
-    ImGui::SameLine();
-
     if (m_imgui->button(m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), _u8L("Reset selection"), UndoRedo::SnapshotType::GizmoAction);
         int                  idx = -1;
-        for (ModelVolume *mv : mo->volumes)
+        for (ModelVolume* mv : mo->volumes)
             if (mv->is_model_part()) {
                 ++idx;
                 m_triangle_selectors[idx]->reset();
@@ -325,6 +316,20 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
         update_model_object();
         m_parent.set_as_dirty();
     }
+
+    ImGui::Separator();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
+    TooltipButton(x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    ImGui::PopStyleVar(1);
 
     const DynamicPrintConfig &glb_cfg                    = wxGetApp().preset_bundle->prints.get_edited_preset().config;
     const bool                has_object_fuzzy_override  = obj_cfg.option("fuzzy_skin");
@@ -356,9 +361,10 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
             }
         };
 
+        ImGui::Separator();
+
         link_text();
     }
-    ImGui::PopStyleVar(2);
     GizmoImguiEnd();
 
     // BBS

@@ -2316,27 +2316,25 @@ void GLGizmoCut3D::render_connectors_input_window(CutConnectors &connectors, flo
     }
 
     ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    TooltipButton(x, y);
-
     float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+    
+    TooltipButton(x, y);
 
     ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Confirm connectors"), _L("Cancel")});
     if (m_imgui->button(_L("Confirm connectors"))) {
         unselect_all_connectors();
         set_connectors_editing(false);
     }
 
-    ImGui::SameLine(m_label_width + m_editing_window_width - m_imgui->calc_text_size(_L("Cancel")).x - m_imgui->get_style_scaling() * 8);
-
+    ImGui::SameLine();
     if (m_imgui->button(_L("Cancel"))) {
         reset_connectors();
         set_connectors_editing(false);
     }
 
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
 }
 
 void GLGizmoCut3D::render_build_size()
@@ -2758,18 +2756,23 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
     }
 
     ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    TooltipButton(x, y);
-
     float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
+    TooltipButton(x, y);
+
     ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Perform cut"), _L("Cancel")});
+
     m_imgui->disabled_begin(!can_perform_cut());
-        if(m_imgui->button(_L("Perform cut")))
-            perform_cut(m_parent.get_selection());
+    if(m_imgui->button(_L("Perform cut")))
+        perform_cut(m_parent.get_selection());
     m_imgui->disabled_end();
+
+    ImGui::SameLine();
+    if (m_imgui->button(_L("Cancel"))) {
+        m_parent.reset_all_gizmos();
+    }
 
     ImGui::PopStyleVar(2);
 }
@@ -2871,27 +2874,47 @@ void GLGizmoCut3D::init_input_window_data(CutConnectors &connectors)
         m_label_width += ImGui::GetStyle().WindowPadding.x;
     }
 }
-
 void GLGizmoCut3D::render_input_window_warning() const
 {
-    if (! m_invalid_connectors_idxs.empty()) {
-        wxString out = /*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Invalid connectors detected") + ":";
+    bool has_invalid_connectors = !m_invalid_connectors_idxs.empty();
+    bool has_keep_warning       = !m_keep_upper && !m_keep_lower;
+    bool has_placement_warning  = !has_valid_contour() || !has_valid_groove();
+
+    if (!has_invalid_connectors && !has_keep_warning && !has_placement_warning) {
+        return; 
+    }
+
+    float parent_width = ImGui::GetContentRegionAvail().x;
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::to_ImVec4(ColorRGB::WARNING()));
+
+    ImGui::Separator();
+
+    if (has_invalid_connectors) {
+        wxString out = _L("Warning") + ": " + _L("Invalid connectors detected") + ":";
+
         if (m_info_stats.outside_cut_contour > size_t(0))
             out += "\n - " + format_wxstr(_L_PLURAL("%1$d connector is out of cut contour", "%1$d connectors are out of cut contour", m_info_stats.outside_cut_contour),
                                           m_info_stats.outside_cut_contour);
         if (m_info_stats.outside_bb > size_t(0))
             out += "\n - " + format_wxstr(_L_PLURAL("%1$d connector is out of object", "%1$d connectors are out of object", m_info_stats.outside_bb),
-                                           m_info_stats.outside_bb);
+                                          m_info_stats.outside_bb);
         if (m_info_stats.is_overlap)
             out += "\n - " + _L("Some connectors are overlapped");
-        m_imgui->text(out);
+
+        m_imgui->text_wrapped(out, parent_width);
     }
-    if (!m_keep_upper && !m_keep_lower)
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Select at least one object to keep after cutting."));
-    if (!has_valid_contour())
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane is placed out of object"));
-    else if (!has_valid_groove())
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane with groove is invalid"));
+
+    if (has_keep_warning) {
+        m_imgui->text_wrapped(_L("Warning") + ": " + _L("Select at least one object to keep after cutting."), parent_width);
+    }
+
+    if (!has_valid_contour()) {
+        m_imgui->text_wrapped(_L("Warning") + ": " + _L("Cut plane is placed out of object"), parent_width);
+    } else if (!has_valid_groove()) {
+        m_imgui->text_wrapped(_L("Warning") + ": " + _L("Cut plane with groove is invalid"), parent_width);
+    }
+
+    ImGui::PopStyleColor(1);
 }
 
 void GLGizmoCut3D::on_render_input_window(float x, float y, float bottom_limit)

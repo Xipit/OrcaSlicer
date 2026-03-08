@@ -286,11 +286,6 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         }
     }
 
-    m_imgui->bbl_checkbox(m_desc["on_overhangs_only"], m_paint_on_overhangs_only);
-    if (ImGui::IsItemHovered())
-        m_imgui->tooltip(format_wxstr(_L("Allows painting only on facets selected by: \"%1%\""), m_desc["highlight_by_angle"]), max_tooltip_width);
-    ImGui::Separator();
-
     if (m_current_tool != old_tool)
         this->tool_changed(old_tool, m_current_tool);
 
@@ -352,6 +347,7 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         ImGui::BBLDragFloat("##gap_area_input", &TriangleSelectorPatch::gap_area, 0.05f, 0.0f, 0.0f, "%.2f");
     }
 
+    ImGui::Separator();
     float position_before_text_y = ImGui::GetCursorPos().y;
     ImGui::AlignTextToFramePadding();
     m_imgui->text(m_desc["highlight_by_angle"]);
@@ -389,6 +385,14 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
     ImGui::PushItemWidth(1.5 * slider_icon_width);
     ImGui::BBLDragFloat("##angle_threshold_deg_input", &m_highlight_by_angle_threshold_deg, 0.05f, 0.0f, 0.0f, "%.2f");
 
+    m_imgui->bbl_checkbox(m_desc["on_overhangs_only"], m_paint_on_overhangs_only);
+    if (ImGui::IsItemHovered())
+        m_imgui->tooltip(format_wxstr(
+            _L("Allows painting only on facets selected by: \"%1%\""),
+            m_desc["highlight_by_angle"]),
+            max_tooltip_width
+        );
+
     if (m_current_tool != ImGui::GapFillIcon) {
         ImGui::Separator();
         if (m_c->object_clipper()->get_position() == 0.f) {
@@ -416,13 +420,8 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
     }
 
     ImGui::Separator();
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    TooltipButton(x, y);
-
-    float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
-
-    ImGui::SameLine();
 
     // Perform button is for gap fill
     if (m_current_tool == ImGui::GapFillIcon) {
@@ -437,15 +436,14 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
             update_model_object();
             m_parent.set_as_dirty();
         }
+        ImGui::SameLine();
     }
-
-    ImGui::SameLine();
 
     if (m_imgui->button(m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
-        ModelObject *        mo  = m_c->selection_info()->model_object();
+        ModelObject*         mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
-        for (ModelVolume *mv : mo->volumes)
+        for (ModelVolume* mv : mo->volumes)
             if (mv->is_model_part()) {
                 ++idx;
                 m_triangle_selectors[idx]->reset();
@@ -455,7 +453,17 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
+
+    ImGui::Separator();
+
+    TooltipButton(x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
 
     GizmoImguiEnd();
 

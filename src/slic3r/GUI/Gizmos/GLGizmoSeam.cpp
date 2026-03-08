@@ -34,8 +34,8 @@ bool GLGizmoSeam::on_init()
 
     m_desc["clipping_of_view"] = _L("Section view");
     m_desc["reset_direction"]  = _L("Reset direction");
-    m_desc["cursor_size"]      = _L("Brush size");
-    m_desc["cursor_type"]      = _L("Brush shape");
+    m_desc["cursor_size"]      = _L("Pen size");
+    m_desc["tool_type"]        = _L("Tool type");
     m_desc["enforce"]          = _L("Enforce seam");
     m_desc["block"]            = _L("Block seam");
     m_desc["remove"]           = _L("Erase");
@@ -146,7 +146,7 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     const float max_tooltip_width = ImGui::GetFontSize() * 20.0f;
 
     ImGui::AlignTextToFramePadding();
-    m_imgui->text(m_desc.at("cursor_type"));
+    m_imgui->text(m_desc.at("tool_type"));
     std::array<wchar_t, 2> tool_ids = { ImGui::CircleButtonIcon, ImGui::SphereButtonIcon };
     std::array<wchar_t, 2> icons;
     if (m_is_dark_mode)
@@ -214,6 +214,8 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     ImGui::PushItemWidth(1.5 * slider_icon_width);
     ImGui::BBLDragFloat("##cursor_radius_input", &m_cursor_radius, 0.05f, 0.0f, 0.0f, "%.2f");
 
+    m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only); 
+
     ImGui::Separator();
     if (m_c->object_clipper()->get_position() == 0.f) {
         ImGui::AlignTextToFramePadding();
@@ -239,23 +241,15 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     if (slider_clp_dist || b_clp_dist_input) { m_c->object_clipper()->set_position_by_ratio(clp_dist, true); }
 
     ImGui::Separator();
-    m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only);
 
-    ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
-
-    float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
-
-    ImGui::SameLine();
 
     if (m_imgui->button(m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
-        ModelObject         *mo  = m_c->selection_info()->model_object();
+        ModelObject*         mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
-        for (ModelVolume *mv : mo->volumes)
+        for (ModelVolume* mv : mo->volumes)
             if (mv->is_model_part()) {
                 ++idx;
                 m_triangle_selectors[idx]->reset();
@@ -265,7 +259,18 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
+
+    ImGui::Separator();
+
+    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
     GizmoImguiEnd();
 
     //BBS

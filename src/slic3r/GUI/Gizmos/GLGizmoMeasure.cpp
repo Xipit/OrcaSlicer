@@ -2174,9 +2174,13 @@ void GLGizmoMeasure::on_render_input_window(float x, float y, float bottom_limit
     show_distance_xyz_ui();
     ImGui::Separator();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
-    ImGui::PopStyleVar(1);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
 
     if (last_feature != m_curr_feature || last_mode != m_mode || last_selected_features != m_selected_features) {
         // the dialog may have changed its size, ask for an extra frame to render it properly

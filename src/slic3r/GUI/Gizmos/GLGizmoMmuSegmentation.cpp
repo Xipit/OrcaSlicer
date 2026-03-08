@@ -500,6 +500,19 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
         ImGui::SameLine(drag_left_width + circle_max_width);
         ImGui::PushItemWidth(1.5 * slider_icon_width);
         ImGui::BBLDragFloat("##cursor_radius_input", &m_cursor_radius, 0.05f, 0.0f, 0.0f, "%.2f");
+        
+        if (m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only)) {
+            if (m_vertical_only) {
+                m_horizontal_only = false;
+            }
+        }
+        ImGui::SameLine(circle_max_width);
+        ImGui::PushItemWidth(sliders_width);
+        if (m_imgui->bbl_checkbox(_L("Horizontal"), m_horizontal_only)) {
+            if (m_horizontal_only) {
+                m_vertical_only = false;
+            }
+        }
 
         ImGui::Separator();
         if (m_c->object_clipper()->get_position() == 0.f) {
@@ -527,6 +540,21 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
     } else if (m_current_tool == ImGui::TriangleButtonIcon) {
         m_cursor_type = TriangleSelector::CursorType::POINTER;
         m_tool_type   = ToolType::BRUSH;
+
+        if (m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only)) {
+            if (m_vertical_only) {
+                m_horizontal_only = false;
+            }
+        }
+        ImGui::SameLine(circle_max_width);
+        ImGui::PushItemWidth(sliders_width);
+        if (m_imgui->bbl_checkbox(_L("Horizontal"), m_horizontal_only)) {
+            if (m_horizontal_only) {
+                m_vertical_only = false;
+            }
+        }
+
+        ImGui::Separator();
 
         if (m_c->object_clipper()->get_position() == 0.f) {
             ImGui::AlignTextToFramePadding();
@@ -648,19 +676,6 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
     }
 
     ImGui::Separator();
-    if(m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only)){
-        if(m_vertical_only){
-            m_horizontal_only = false;
-        }
-    }
-    if(m_imgui->bbl_checkbox(_L("Horizontal"), m_horizontal_only)){
-        if(m_horizontal_only){
-            m_vertical_only = false;
-        }
-    }
-
-    ImGui::Separator();
-    ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() * 0.5f));
 
     // ORCA: Remap filaments section (Border only, Title in border). 
     // Styled as a panel for visual grouping.
@@ -713,17 +728,11 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
         }
     }
 
-    ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() * 0.5f));
     ImGui::Separator();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    TooltipButton(x, y);
-
-    float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
-
-    ImGui::SameLine();
-
+    
     if (m_current_tool == ImGui::GapFillIcon) {
         if (m_imgui->button(m_desc.at("perform"))) {
             Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Gap fill", UndoRedo::SnapshotType::GizmoAction);
@@ -742,9 +751,9 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
 
     if (m_imgui->button(m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
-        ModelObject *        mo  = m_c->selection_info()->model_object();
+        ModelObject*         mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
-        for (ModelVolume *mv : mo->volumes)
+        for (ModelVolume* mv : mo->volumes)
             if (mv->is_model_part()) {
                 ++idx;
                 m_triangle_selectors[idx]->reset();
@@ -754,7 +763,18 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
+
+    ImGui::Separator();
+
+    TooltipButton(x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
     GizmoImguiEnd();
 
     // BBS

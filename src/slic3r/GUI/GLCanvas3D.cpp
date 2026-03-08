@@ -218,7 +218,7 @@ bool GLCanvas3D::LayersEditing::is_allowed() const
 
 float GLCanvas3D::LayersEditing::s_overlay_window_width;
 
-void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanvas3D& canvas) {
+void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& canvas) {
     if (!m_enabled)
         return;
 
@@ -315,6 +315,11 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanv
 
     ImGui::Separator();
 
+    if (imgui.button(_L("Reset")))
+        wxPostEvent((wxEvtHandler*) canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+
+    ImGui::Separator();
+
     const wxString shift = GUI::shortkey_shift_prefix();
     std::vector<std::pair<wxString, wxString>> shortcuts = {
         {_L("Left mouse button") + ":" ,            _L("Add detail")},
@@ -328,8 +333,10 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanv
     GLGizmoUtils::TooltipButton(&imgui, canvas, shortcuts, x, y);
 
     ImGui::SameLine();
-    if (imgui.button(_L("Reset")))
-        wxPostEvent((wxEvtHandler*)canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+    GLGizmoUtils::BeginRightAlignedButtons(&imgui, {_L("Done")});
+    if (imgui.button(_L("Done"))) {
+        m_enabled = false;  
+    }
 
     GLCanvas3D::LayersEditing::s_overlay_window_width = ImGui::GetWindowSize().x;
     imgui.end();
@@ -337,7 +344,7 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanv
     imgui.pop_toolbar_style();
 }
 
-void GLCanvas3D::LayersEditing::render_overlay(const GLCanvas3D& canvas)
+void GLCanvas3D::LayersEditing::render_overlay(GLCanvas3D& canvas)
 {
     render_variable_layer_height_dialog(canvas);
     render_active_object_annotations(canvas);

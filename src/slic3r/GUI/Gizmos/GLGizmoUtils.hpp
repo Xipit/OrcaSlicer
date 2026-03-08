@@ -24,6 +24,9 @@ void TooltipButton(
     float                                               y
 );
 
+// Sets up ImGui to render buttons that are right-aligned within the current window, using the provided labels to calculate spacing.
+void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxString>& labels);
+
 } // namespace GLGizmoUtils
 } // namespace Slic3r::GUI
 

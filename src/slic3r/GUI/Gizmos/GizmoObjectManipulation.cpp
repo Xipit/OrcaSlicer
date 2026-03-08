@@ -866,6 +866,12 @@ void GizmoObjectManipulation::do_render_move_window(ImGuiWrapper *imgui_wrapper,
     ImGui::Spacing();
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_move, x, y);
 
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
+
     m_last_active_item = current_active_id;
     last_move_input_window_width = ImGui::GetWindowWidth();
 
@@ -1060,6 +1066,12 @@ void GizmoObjectManipulation::do_render_rotate_window(ImGuiWrapper *imgui_wrappe
     ImGui::Separator();
     ImGui::Spacing();
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_rotate, x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
 
     m_last_active_item             = current_active_id;
     last_rotate_input_window_width = ImGui::GetWindowWidth();
@@ -1294,6 +1306,12 @@ void GizmoObjectManipulation::do_render_scale_input_window(ImGuiWrapper* imgui_w
 
     ImGui::Separator();
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_scale, x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
 
     m_last_active_item = current_active_id;
     last_scale_input_window_width = ImGui::GetWindowWidth();

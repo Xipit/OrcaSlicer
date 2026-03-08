@@ -637,7 +637,6 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
 
     const float currt_scale = m_parent.get_scale();
     ImGuiWrapper::push_toolbar_style(currt_scale);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0 * currt_scale, 5.0 * currt_scale));
     ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 4.0f * currt_scale);
     GizmoImguiBegin(get_name(),
                     ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
@@ -646,13 +645,10 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
     std::vector<wxString> text_list       = {m_desc["head_diameter"], m_desc["max_angle"], m_desc["detection_radius"], m_desc["clipping_of_view"]};
     float                 widest_text     = m_imgui->find_widest_text(text_list);
     float                 caption_size    = widest_text + space_size + ImGui::GetStyle().WindowPadding.x;
-    float                 input_text_size = m_imgui->scaled(10.0f);
     float                 button_size     = ImGui::GetFrameHeight();
 
-    float list_width      = input_text_size + ImGui::GetStyle().ScrollbarSize + 2 * currt_scale;
-
     const float slider_icon_width = m_imgui->get_slider_icon_size().x;
-    const float slider_width      = list_width - space_size;
+    const float slider_width     = m_imgui->scaled(10.0f);
     const float drag_left_width   = caption_size + slider_width + space_size;
 
     // adjust window position to avoid overlap the view toolbar
@@ -716,15 +712,14 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
     if (slider_clp_dist || b_clp_dist_input) { m_c->object_clipper()->set_position_by_ratio(clp_dist, false, true); }
     ImGui::Separator();
 
-    // ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-
     float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
     if (m_imgui->button(m_desc["auto_generate"])) { auto_generate(); }
 
+    ImGui::Separator();
+
     if (m_imgui->button(m_desc["remove_selected"])) { delete_selected_points(); }
     float font_size = ImGui::GetFontSize();
-    //ImGui::Dummy(ImVec2(font_size * 1, font_size * 1.3));
     ImGui::SameLine();
     if (m_imgui->button(m_desc["remove_all"])) {
         if (m_editing_cache.size() > 0) {
@@ -734,56 +729,68 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
     }
     ImGui::PopStyleVar(1);
 
+    ImGui::Separator();
+
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
 
-    if (glb_cfg.opt_enum<BrimType>("brim_type") != btPainted) {
-        ImGui::SameLine();
-        auto link_text = [&]() {
-            ImColor HyperColor = ImGuiWrapper::COL_ORCA;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::to_ImVec4(ColorRGB::WARNING()));
-            float parent_width = ImGui::GetContentRegionAvail().x;
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    bool brim_not_painted = (obj_cfg.option("brim_type")) ? (obj_cfg.opt_enum<BrimType>("brim_type") != btPainted) :
+                                                            (glb_cfg.opt_enum<BrimType>("brim_type") != btPainted);
+    bool has_invalid_ears = !m_single_brim.empty();
+
+    if (brim_not_painted || has_invalid_ears) {
+        ImGui::Separator();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::to_ImVec4(ColorRGB::WARNING()));
+
+        float parent_width = ImGui::GetContentRegionAvail().x;
+        float font_size    = ImGui::GetFontSize();
+
+        if (brim_not_painted) {
             m_imgui->text_wrapped(_L("Warning: The brim type is not set to \"painted\", the brim ears will not take effect!"), parent_width);
-            ImGui::PopStyleColor();
+
+            ImColor HyperColor = ImGuiWrapper::COL_ORCA;
             ImGui::PushStyleColor(ImGuiCol_Text, HyperColor.Value);
-            ImGui::Dummy(ImVec2(font_size * 1.8, font_size * 1.3));
+
+            ImGui::Dummy(ImVec2(font_size * 1.8f, 0.0f)); // Horizontal indent
             ImGui::SameLine();
             m_imgui->bold_text(_u8L("Set the brim type of this object to \"painted\""));
-            ImGui::PopStyleColor();
-            // underline
-            ImVec2 lineEnd = ImGui::GetItemRectMax();
-            lineEnd.y -= 2.0f;
-            ImVec2 lineStart = lineEnd;
-            lineStart.x = ImGui::GetItemRectMin().x;
-            ImGui::GetWindowDrawList()->AddLine(lineStart, lineEnd, HyperColor);
-            if (ImGui::IsMouseHoveringRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), true)) {
+
+            ImVec2 min = ImGui::GetItemRectMin();
+            ImVec2 max = ImGui::GetItemRectMax();
+            ImGui::GetWindowDrawList()->AddLine(ImVec2(min.x, max.y - 2.0f), ImVec2(max.x, max.y - 2.0f), HyperColor);
+
+            if (ImGui::IsMouseHoveringRect(min, max)) {
                 m_link_text_hover = true;
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
                 if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                     DynamicPrintConfig new_conf = obj_cfg;
                     new_conf.set_key_value("brim_type", new ConfigOptionEnum<BrimType>(btPainted));
                     mo->config.assign_config(new_conf);
                 }
-            }else {
+            } else {
                 m_link_text_hover = false;
             }
-        };
-
-        if (obj_cfg.option("brim_type")) {
-            if (obj_cfg.opt_enum<BrimType>("brim_type") != btPainted) {
-                link_text();
-            }
-        }else {
-            link_text();
+            ImGui::PopStyleColor(); // Pop HyperColor
         }
 
-    }
+        if (has_invalid_ears) {
+            wxString out = _L("Warning") + ": " + std::to_string(m_single_brim.size()) + " " + _L("invalid brim ears");
+            m_imgui->text_wrapped(out, parent_width);
+        }
 
-    if (!m_single_brim.empty()) {
-        wxString out = _L("Warning") + ": " + std::to_string(m_single_brim.size()) + _L(" invalid brim ears");
-        m_imgui->warning_text(out);
+        ImGui::PopStyleColor(); // Pop Warning Color
+    } else {
+        // Reset hover state if no warnings are active
+        m_link_text_hover = false;
     }
 
     GizmoImguiEnd();
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
     ImGuiWrapper::pop_toolbar_style();
 }
 

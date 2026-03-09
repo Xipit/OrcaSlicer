@@ -2774,7 +2774,7 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
         m_parent.reset_all_gizmos();
     }
 
-    ImGui::PopStyleVar(2);
+    ImGui::PopStyleVar(1);
 }
 
 void GLGizmoCut3D::validate_connector_settings()

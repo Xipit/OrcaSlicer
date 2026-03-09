@@ -775,7 +775,7 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
             } else {
                 m_link_text_hover = false;
             }
-            ImGui::PopStyleColor(); // Pop HyperColor
+            ImGui::PopStyleColor(1); // Pop HyperColor
         }
 
         if (has_invalid_ears) {
@@ -783,7 +783,7 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
             m_imgui->text_wrapped(out, parent_width);
         }
 
-        ImGui::PopStyleColor(); // Pop Warning Color
+        ImGui::PopStyleColor(1); // Pop Warning Color
     } else {
         // Reset hover state if no warnings are active
         m_link_text_hover = false;

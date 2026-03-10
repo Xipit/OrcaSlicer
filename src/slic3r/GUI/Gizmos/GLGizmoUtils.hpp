@@ -7,11 +7,12 @@
 #include <wx/string.h>
 #include "imgui.h"
 
-class ImGuiWrapper;
 
 namespace Slic3r::GUI {
 
-class GLCanvas3D; // Forward declaration
+// Forward declaration
+class ImGuiWrapper;
+class GLCanvas3D; 
 
 namespace GLGizmoUtils {
 
@@ -25,7 +26,15 @@ void TooltipButton(
 );
 
 // Sets up ImGui to render buttons that are right-aligned within the current window, using the provided labels to calculate spacing.
-void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxString>& labels);
+void BeginRightAlignedButtons(
+    ImGuiWrapper*   imgui_wrapper, 
+    const           std::vector<wxString>& labels
+);
+
+void PushOrcaButtonStyle(ImGuiWrapper* imgui_wrapper);
+
+void PopOrcaButtonStyle();
+
 
 } // namespace GLGizmoUtils
 } // namespace Slic3r::GUI

@@ -1190,16 +1190,17 @@ bool GLGizmoCut3D::on_init()
     const wxString shift = GUI::shortkey_shift_prefix();
 
     m_shortcuts_cut = {
-        {shift + _L("Drag"),        _L("Draw cut line")}
+        {_L("Drag"),                        _L("Move cut line")},
+        {shift + _L("Drag"),                _L("Draw cut line")}
     };
 
     m_shortcuts_connector = {
-        {_L("Left click"),          _L("Add connector")},
-        {_L("Right click"),         _L("Remove connector")},
-        {_L("Drag"),                _L("Move connector")},
-        {shift + _L("Left click"),  _L("Add connector to selection")},
-        {alt + _L("Left click"),    _L("Remove connector from selection")},
-        {ctrl + "A",                _L("Select all connectors")},
+        {_L("Left mouse button"),           _L("Add connector")},
+        {_L("Right mouse button"),          _L("Remove connector")},
+        {_L("Drag"),                        _L("Move connector")},
+        {shift + _L("Left mouse button"),   _L("Add connector to selection")},
+        {alt + _L("Left mouse button"),     _L("Remove connector from selection")},
+        {ctrl + "A",                        _L("Select all connectors")},
     };
 
     return true;
@@ -2323,10 +2324,12 @@ void GLGizmoCut3D::render_connectors_input_window(CutConnectors &connectors, flo
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Confirm connectors"), _L("Cancel")});
+    GLGizmoUtils::PushOrcaButtonStyle(m_imgui);
     if (m_imgui->button(_L("Confirm connectors"))) {
         unselect_all_connectors();
         set_connectors_editing(false);
     }
+    GLGizmoUtils::PopOrcaButtonStyle();
 
     ImGui::SameLine();
     if (m_imgui->button(_L("Cancel"))) {
@@ -2765,8 +2768,11 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
     GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Perform cut"), _L("Cancel")});
 
     m_imgui->disabled_begin(!can_perform_cut());
-    if(m_imgui->button(_L("Perform cut")))
+    GLGizmoUtils::PushOrcaButtonStyle(m_imgui);
+    if (m_imgui->button(_L("Perform cut")))
         perform_cut(m_parent.get_selection());
+
+    GLGizmoUtils::PopOrcaButtonStyle();
     m_imgui->disabled_end();
 
     ImGui::SameLine();

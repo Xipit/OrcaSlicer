@@ -335,7 +335,13 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons(&imgui, {_L("Done")});
     if (imgui.button(_L("Done"))) {
-        m_enabled = false;  
+        m_enabled = false;
+
+        GLToolbarItem* item = canvas.m_main_toolbar.get_item("layersediting");
+        item->set_state(GLToolbarItem::Normal);
+
+        canvas.set_as_dirty();
+        canvas.request_extra_frame();
     }
 
     GLCanvas3D::LayersEditing::s_overlay_window_width = ImGui::GetWindowSize().x;

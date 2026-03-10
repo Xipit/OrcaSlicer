@@ -1,4 +1,5 @@
 #include "GLGizmoEmboss.hpp"
+#include "GLGizmoUtils.hpp"
 #include "slic3r/GUI/GLCanvas3D.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/GUI_ObjectList.hpp"
@@ -357,8 +358,7 @@ void GLGizmoEmboss::on_shortcut_key() {
     else {
         // shortcut is pressed when text is selected soo start edit it.
         auto& mng = m_parent.get_gizmos_manager();
-        if (mng.get_current_type() != GLGizmosManager::Emboss)
-            mng.open_gizmo(GLGizmosManager::Emboss);
+        mng.open_gizmo(GLGizmosManager::Emboss);
     }
 }
 
@@ -725,6 +725,10 @@ bool GLGizmoEmboss::on_init()
     // NOTE: It has special handling in GLGizmosManager::handle_shortcut
     m_shortcut_key = WXK_CONTROL_T;
 
+    m_shortcuts = {
+        {_L("Drag"),        _L("Position on surface")}
+    };
+
     // initialize text styles
     m_style_manager.init(wxGetApp().app_config);
 
@@ -918,7 +922,7 @@ void GLGizmoEmboss::on_render_input_window(float x, float y, float bottom_limit)
     
     GizmoImguiBegin(get_name(), ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 
-    draw_window();
+    draw_window(x, y);
 
     GizmoImguiEnd();
 
@@ -1341,7 +1345,7 @@ void GLGizmoEmboss::close()
         mng.open_gizmo(GLGizmosManager::Emboss);
 }
 
-void GLGizmoEmboss::draw_window()
+void GLGizmoEmboss::draw_window(float x, float y)
 {
 #ifdef ALLOW_DEBUG_MODE
     if (ImGui::Button("re-process")) process();
@@ -1392,6 +1396,15 @@ void GLGizmoEmboss::draw_window()
     if (!m_volume->is_the_only_one_part()) {
         ImGui::Separator();
         draw_model_type();
+    }
+
+    ImGui::Separator();
+    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
     }
        
 #ifdef SHOW_WX_FONT_DESCRIPTOR

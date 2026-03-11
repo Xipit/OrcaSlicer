@@ -61,15 +61,15 @@ GizmoObjectManipulation::GizmoObjectManipulation(GLCanvas3D& glcanvas)
     const wxString ctrl                    = GUI::shortkey_ctrl_prefix();
 
     m_shortcuts_move = {
-        {alt + _L("Left mouse button"),     _L("Part_selection")},
+        {alt + _L("Left mouse button"),     _L("Part selection")},
         {shift + _L("Left mouse button"),   _L("Fixed step drag")}
     };
 
     m_shortcuts_rotate = {
-        {alt + _L("Left mouse button"),     _L("Part_selection")}};
+        {alt + _L("Left mouse button"),     _L("Part selection")}};
 
     m_shortcuts_scale = {
-        {alt + _L("Left mouse button"),     _L("Part_selection")},
+        {alt + _L("Left mouse button"),     _L("Part selection")},
         {shift + _L("Left mouse button"),   _L("Fixed step drag")},
         {ctrl + _L("Left mouse button"),    _L("Single sided scaling")}};
 }
@@ -864,10 +864,13 @@ void GizmoObjectManipulation::do_render_move_window(ImGuiWrapper *imgui_wrapper,
     ImGui::Spacing(); // needed after Text
     ImGui::Separator();
     ImGui::Spacing();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_move, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (imgui_wrapper->button(_L("Done"))) {
         m_glcanvas.reset_all_gizmos();
     }
@@ -876,7 +879,7 @@ void GizmoObjectManipulation::do_render_move_window(ImGuiWrapper *imgui_wrapper,
     last_move_input_window_width = ImGui::GetWindowWidth();
 
     imgui_wrapper->end();
-    ImGui::PopStyleVar(1);
+    ImGui::PopStyleVar(2);
     ImGuiWrapper::pop_toolbar_style();
 }
 
@@ -1065,10 +1068,13 @@ void GizmoObjectManipulation::do_render_rotate_window(ImGuiWrapper *imgui_wrappe
     ImGui::Spacing(); // needed after Text
     ImGui::Separator();
     ImGui::Spacing();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_rotate, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (imgui_wrapper->button(_L("Done"))) {
         m_glcanvas.reset_all_gizmos();
     }
@@ -1077,7 +1083,7 @@ void GizmoObjectManipulation::do_render_rotate_window(ImGuiWrapper *imgui_wrappe
     last_rotate_input_window_width = ImGui::GetWindowWidth();
 
     imgui_wrapper->end();
-    ImGui::PopStyleVar(1);
+    ImGui::PopStyleVar(2);
     ImGuiWrapper::pop_toolbar_style();
 }
 
@@ -1305,13 +1311,18 @@ void GizmoObjectManipulation::do_render_scale_input_window(ImGuiWrapper* imgui_w
         m_glcanvas.handle_sidebar_focus_event("", false);
 
     ImGui::Separator();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     GLGizmoUtils::TooltipButton(imgui_wrapper, m_glcanvas, m_shortcuts_scale, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(imgui_wrapper, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (imgui_wrapper->button(_L("Done"))) {
         m_glcanvas.reset_all_gizmos();
     }
+
+    ImGui::PopStyleVar(1);
 
     m_last_active_item = current_active_id;
     last_scale_input_window_width = ImGui::GetWindowWidth();

@@ -763,17 +763,18 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(1);
 
     ImGui::Separator();
 
     TooltipButton(x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (m_imgui->button(_L("Done"))) {
         m_parent.reset_all_gizmos();
     }
+
+    ImGui::PopStyleVar(1);
 
     GizmoImguiEnd();
 

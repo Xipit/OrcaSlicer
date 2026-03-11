@@ -324,7 +324,7 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
     TooltipButton(x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (m_imgui->button(_L("Done"))) {
         m_parent.reset_all_gizmos();
     }

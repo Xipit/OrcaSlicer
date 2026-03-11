@@ -2323,8 +2323,8 @@ void GLGizmoCut3D::render_connectors_input_window(CutConnectors &connectors, flo
     TooltipButton(x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Confirm connectors"), _L("Cancel")});
-    GLGizmoUtils::PushOrcaButtonStyle(m_imgui);
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Confirm connectors"), _L("Cancel")});
+    GLGizmoUtils::PushOrcaButtonStyle();
     if (m_imgui->button(_L("Confirm connectors"))) {
         unselect_all_connectors();
         set_connectors_editing(false);
@@ -2765,10 +2765,10 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
     TooltipButton(x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Perform cut"), _L("Cancel")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Perform cut"), _L("Cancel")});
 
     m_imgui->disabled_begin(!can_perform_cut());
-    GLGizmoUtils::PushOrcaButtonStyle(m_imgui);
+    GLGizmoUtils::PushOrcaButtonStyle();
     if (m_imgui->button(_L("Perform cut")))
         perform_cut(m_parent.get_selection());
 

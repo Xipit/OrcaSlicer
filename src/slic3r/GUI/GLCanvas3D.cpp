@@ -333,7 +333,7 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& 
     GLGizmoUtils::TooltipButton(&imgui, canvas, shortcuts, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(&imgui, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (imgui.button(_L("Done"))) {
         m_enabled = false;
 

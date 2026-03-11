@@ -1399,13 +1399,25 @@ void GLGizmoEmboss::draw_window(float x, float y)
     }
 
     ImGui::Separator();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Delete"), _L("Done")});
+    GLGizmoUtils::PushDangerButtonStyle();
+    if (m_imgui->button(_L("Delete"))) {
+        m_parent.delete_selected();
+    }
+    GLGizmoUtils::PopDangerButtonStyle();
+
+    ImGui::SameLine();
     if (m_imgui->button(_L("Done"))) {
         m_parent.reset_all_gizmos();
     }
+
+    ImGui::PopStyleVar(1);
        
 #ifdef SHOW_WX_FONT_DESCRIPTOR
     if (is_selected_style)

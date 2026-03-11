@@ -27,13 +27,16 @@ void TooltipButton(
 
 // Sets up ImGui to render buttons that are right-aligned within the current window, using the provided labels to calculate spacing.
 void BeginRightAlignedButtons(
-    ImGuiWrapper*   imgui_wrapper, 
     const           std::vector<wxString>& labels
 );
 
-void PushOrcaButtonStyle(ImGuiWrapper* imgui_wrapper);
+void PushOrcaButtonStyle();
 
 void PopOrcaButtonStyle();
+
+void PushDangerButtonStyle();
+
+void PopDangerButtonStyle();
 
 
 } // namespace GLGizmoUtils

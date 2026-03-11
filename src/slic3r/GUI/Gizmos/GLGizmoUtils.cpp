@@ -79,7 +79,7 @@ void TooltipButton(
     ImGui::PopStyleVar(2);
 }
 
-void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxString>& labels)
+void BeginRightAlignedButtons(const std::vector<wxString>& labels)
 {
     float       total_width = 0.0f;
     ImGuiStyle& style       = ImGui::GetStyle();
@@ -88,7 +88,7 @@ void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxS
 
     // Calculate width
     for (size_t i = 0; i < labels.size(); ++i) {
-        total_width += imgui_wrapper->calc_text_size(labels[i]).x + padding;
+        total_width += ImGuiWrapper::calc_text_size(labels[i]).x + padding;
         if (i < labels.size() - 1)
             total_width += spacing;
     }
@@ -105,9 +105,9 @@ void BeginRightAlignedButtons(ImGuiWrapper* imgui_wrapper, const std::vector<wxS
     ImGui::SetCursorPosX(posX);
 }
 
-void PushOrcaButtonStyle(ImGuiWrapper* imgui_wrapper)
+void PushOrcaButtonStyle()
 {
-    ImVec4 base_orca = imgui_wrapper->COL_ORCA;
+    ImVec4 base_orca = ImGuiWrapper::COL_ORCA;
 
     float h, s, v;
     ImGui::ColorConvertRGBtoHSV(base_orca.x, base_orca.y, base_orca.z, h, s, v);
@@ -126,7 +126,7 @@ void PushOrcaButtonStyle(ImGuiWrapper* imgui_wrapper)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
 
-    ImGui::PushStyleColor(ImGuiCol_Text, imgui_wrapper->COL_WINDOW_BG);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::COL_WINDOW_BG);
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 }
@@ -135,6 +135,41 @@ void PopOrcaButtonStyle()
 {
     ImGui::PopStyleVar(1);
     ImGui::PopStyleColor(4);
+}
+
+void PushDangerButtonStyle()
+{
+    ImVec4 base_danger = ImGuiWrapper::COL_ORANGE_LIGHT;
+
+    float h, s, v;
+    ImGui::ColorConvertRGBtoHSV(base_danger.x, base_danger.y, base_danger.z, h, s, v);
+
+    ImVec4 hover, active;
+
+    // Lighter variant for Hover (Increase Value by ~12%)
+    ImGui::ColorConvertHSVtoRGB(h, s, std::min(v + 0.12f, 1.0f), hover.x, hover.y, hover.z);
+    hover.w = base_danger.w;
+
+    // Darker variant for Active (Decrease Value by ~12%)
+    ImGui::ColorConvertHSVtoRGB(h, s, std::max(v - 0.12f, 0.0f), active.x, active.y, active.z);
+    active.w = base_danger.w;
+
+    //ImGui::PushStyleColor(ImGuiCol_Button, base_danger);
+    //ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hover);
+    //ImGui::PushStyleColor(ImGuiCol_ButtonActive, active);
+
+    //ImGui::PushStyleColor(ImGuiCol_Text, base_danger);
+
+    ImGui::PushStyleColor(ImGuiCol_Border, base_danger);
+
+    //ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+}
+
+void PopDangerButtonStyle()
+{
+    //ImGui::PopStyleVar(1);
+    //ImGui::PopStyleColor(4);
+    ImGui::PopStyleColor(1);
 }
 
 } // namespace Slic3r::GUI::GLGizmoUtils

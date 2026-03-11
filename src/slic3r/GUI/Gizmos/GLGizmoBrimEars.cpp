@@ -727,17 +727,18 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
             delete_selected_points();
         }
     }
-    ImGui::PopStyleVar(1);
 
     ImGui::Separator();
 
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons(m_imgui, {_L("Done")});
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
     if (m_imgui->button(_L("Done"))) {
         m_parent.reset_all_gizmos();
     }
+
+    ImGui::PopStyleVar(1);
 
     bool brim_not_painted = (obj_cfg.option("brim_type")) ? (obj_cfg.opt_enum<BrimType>("brim_type") != btPainted) :
                                                             (glb_cfg.opt_enum<BrimType>("brim_type") != btPainted);

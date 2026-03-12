@@ -34,11 +34,6 @@ void PushOrcaButtonStyle();
 
 void PopOrcaButtonStyle();
 
-void PushDangerButtonStyle();
-
-void PopDangerButtonStyle();
-
-
 } // namespace GLGizmoUtils
 } // namespace Slic3r::GUI
 

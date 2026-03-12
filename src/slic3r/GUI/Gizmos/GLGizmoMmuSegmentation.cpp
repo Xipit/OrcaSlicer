@@ -506,8 +506,7 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
                 m_horizontal_only = false;
             }
         }
-        ImGui::SameLine(circle_max_width);
-        ImGui::PushItemWidth(sliders_width);
+  
         if (m_imgui->bbl_checkbox(_L("Horizontal"), m_horizontal_only)) {
             if (m_horizontal_only) {
                 m_vertical_only = false;
@@ -676,6 +675,9 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
     }
 
     ImGui::Separator();
+    
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
     // ORCA: Remap filaments section (Border only, Title in border). 
     // Styled as a panel for visual grouping.
@@ -729,9 +731,6 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
     }
 
     ImGui::Separator();
-
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
     
     if (m_current_tool == ImGui::GapFillIcon) {
         if (m_imgui->button(m_desc.at("perform"))) {

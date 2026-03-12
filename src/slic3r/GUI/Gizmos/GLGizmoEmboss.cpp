@@ -1405,14 +1405,8 @@ void GLGizmoEmboss::draw_window(float x, float y)
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
 
     ImGui::SameLine();
-    GLGizmoUtils::BeginRightAlignedButtons({_L("Delete"), _L("Done")});
-    GLGizmoUtils::PushDangerButtonStyle();
-    if (m_imgui->button(_L("Delete"))) {
-        m_parent.delete_selected();
-    }
-    GLGizmoUtils::PopDangerButtonStyle();
+    GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
 
-    ImGui::SameLine();
     if (m_imgui->button(_L("Done"))) {
         m_parent.reset_all_gizmos();
     }

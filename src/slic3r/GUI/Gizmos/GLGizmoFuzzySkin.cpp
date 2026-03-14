@@ -303,7 +303,14 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
 
     ImGui::Separator();
 
-    if (m_imgui->button(m_desc.at("remove_all"))) {
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
+    TooltipButton(x, y);
+
+    ImGui::SameLine();
+    m_imgui->disabled_begin(mo->is_fuzzy_skin_painted() == false);
+    if (m_imgui->button(_L("Reset"), m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), _u8L("Reset selection"), UndoRedo::SnapshotType::GizmoAction);
         int                  idx = -1;
         for (ModelVolume* mv : mo->volumes)
@@ -316,12 +323,7 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
         update_model_object();
         m_parent.set_as_dirty();
     }
-
-    ImGui::Separator();
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
-
-    TooltipButton(x, y);
+    m_imgui->disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});

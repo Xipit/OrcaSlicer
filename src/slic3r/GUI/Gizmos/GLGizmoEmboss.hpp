@@ -108,6 +108,7 @@ private:
 
     void set_volume_by_selection();
     void reset_volume();
+    void reset_options();
 
     // create volume from text - main functionality
     bool process(bool make_snapshot = true);

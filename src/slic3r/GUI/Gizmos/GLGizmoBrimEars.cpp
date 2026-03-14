@@ -546,6 +546,14 @@ void GLGizmoBrimEars::delete_selected_points()
     update_model_object();
 }
 
+bool GLGizmoBrimEars::has_selected_points() const
+{
+    for (const auto& entry : m_editing_cache) {
+        if (entry.selected) return true;
+    }
+    return false;
+}
+
 void GLGizmoBrimEars::on_dragging(const UpdateData& data)
 {
     if (m_hover_id != -1) {
@@ -718,19 +726,23 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
 
     ImGui::Separator();
 
+    m_imgui->disabled_begin(has_selected_points() == false);
     if (m_imgui->button(m_desc["remove_selected"])) { delete_selected_points(); }
-    float font_size = ImGui::GetFontSize();
+    m_imgui->disabled_end();
+
+    ImGui::Separator();
+
+    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+
     ImGui::SameLine();
-    if (m_imgui->button(m_desc["remove_all"])) {
+    m_imgui->disabled_begin(m_editing_cache.empty());
+    if (m_imgui->button(_L("Reset"), m_desc["remove_all"])) {
         if (m_editing_cache.size() > 0) {
             select_point(AllPoints);
             delete_selected_points();
         }
     }
-
-    ImGui::Separator();
-
-    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+    m_imgui->disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});

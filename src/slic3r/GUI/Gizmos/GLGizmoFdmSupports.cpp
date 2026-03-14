@@ -291,6 +291,9 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
 
     ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() * 0.1));
 
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     if (m_current_tool == ImGui::CircleButtonIcon) {
         m_cursor_type = TriangleSelector::CursorType::CIRCLE;
         m_tool_type = ToolType::BRUSH;
@@ -345,6 +348,21 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         ImGui::SameLine(drag_left_width);
         ImGui::PushItemWidth(1.5 * slider_icon_width);
         ImGui::BBLDragFloat("##gap_area_input", &TriangleSelectorPatch::gap_area, 0.05f, 0.0f, 0.0f, "%.2f");
+
+        // Perform button is for gap fill
+        if (m_current_tool == ImGui::GapFillIcon) {
+            if (m_imgui->button(m_desc.at("perform"))) {
+                Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
+
+                for (int i = 0; i < m_triangle_selectors.size(); i++) {
+                    TriangleSelectorPatch* ts_mm = dynamic_cast<TriangleSelectorPatch*>(m_triangle_selectors[i].get());
+                    ts_mm->update_selector_triangles();
+                    ts_mm->request_update_render_data(true);
+                }
+                update_model_object();
+                m_parent.set_as_dirty();
+            }
+        }
     }
 
     ImGui::Separator();
@@ -420,26 +438,12 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
     }
 
     ImGui::Separator();
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
-    // Perform button is for gap fill
-    if (m_current_tool == ImGui::GapFillIcon) {
-        if (m_imgui->button(m_desc.at("perform"))) {
-            Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
+    TooltipButton(x, y);
 
-            for (int i = 0; i < m_triangle_selectors.size(); i++) {
-                TriangleSelectorPatch* ts_mm = dynamic_cast<TriangleSelectorPatch*>(m_triangle_selectors[i].get());
-                ts_mm->update_selector_triangles();
-                ts_mm->request_update_render_data(true);
-            }
-            update_model_object();
-            m_parent.set_as_dirty();
-        }
-        ImGui::SameLine();
-    }
-
-    if (m_imgui->button(m_desc.at("remove_all"))) {
+    ImGui::SameLine();
+    m_imgui->disabled_begin(m_c->selection_info()->model_object()->is_fdm_support_painted() == false);
+    if (m_imgui->button(_L("Reset"), m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
         ModelObject*         mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
@@ -453,10 +457,7 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         update_model_object();
         m_parent.set_as_dirty();
     }
-
-    ImGui::Separator();
-
-    TooltipButton(x, y);
+    m_imgui->disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});

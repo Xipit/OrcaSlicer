@@ -315,11 +315,6 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& 
 
     ImGui::Separator();
 
-    if (imgui.button(_L("Reset")))
-        wxPostEvent((wxEvtHandler*) canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
-
-    ImGui::Separator();
-
     const wxString shift = GUI::shortkey_shift_prefix();
     std::vector<std::pair<wxString, wxString>> shortcuts = {
         {_L("Left mouse button") + ":" ,            _L("Add detail")},
@@ -331,6 +326,13 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& 
 
     float y = canvas.m_main_toolbar.get_height();
     GLGizmoUtils::TooltipButton(&imgui, canvas, shortcuts, x, y);
+
+    ImGui::SameLine();
+    imgui.disabled_begin(check_object_layers_fixed(*m_slicing_parameters, m_layer_height_profile));
+    if (imgui.button(_L("Reset"))) {
+        wxPostEvent((wxEvtHandler*) canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+    }
+    imgui.disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});

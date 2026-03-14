@@ -17,14 +17,14 @@
     ----------------------------------------
     [Button1] [Button2]
     ----------------------------------------
-    [?]                   [Confirm] [Cancel]
+    [?] [Reset]           [Confirm] [Cancel]
     ----------------------------------------
     ~ Warnings ~
 
     
     Additional details:
         - [Confirm], [Cancel], [Done], ... are buttons that close the Tool Dialog
-        - [Button1], ... are buttons that do not!
+        - [Reset], [Button1], ... are buttons that do not!
         - Non-consequential buttons like [Cancel] and [Done] are always the right-most buttons
         - Multiple warnings can show, but should only have one ImGui::Separator above
         - If no warnings is shown, dont render the ImGui::Separator

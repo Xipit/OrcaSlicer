@@ -245,7 +245,11 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
-    if (m_imgui->button(m_desc.at("remove_all"))) {
+    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+
+    ImGui::SameLine();
+    m_imgui->disabled_begin(m_c->selection_info()->model_object()->is_seam_painted() == false);
+    if (m_imgui->button(_L("Reset"), m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
         ModelObject*         mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
@@ -259,10 +263,7 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
         update_model_object();
         m_parent.set_as_dirty();
     }
-
-    ImGui::Separator();
-
-    GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
+    m_imgui->disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});

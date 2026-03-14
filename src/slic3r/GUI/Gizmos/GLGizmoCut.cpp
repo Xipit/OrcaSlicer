@@ -2641,10 +2641,14 @@ void GLGizmoCut3D::render_snap_specific_input(const std::string& label, const wx
 
 void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, float x, float y, float bottom_limit)
 {
-//    if (m_mode == size_t(CutMode::cutPlanar)) {
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+    
+    const bool is_cut_plane_init = m_rotation_m.isApprox(Transform3d::Identity()) && m_bb_center.isApprox(m_plane_center);
+    const bool has_connectors = !connectors.empty();
+
     CutMode mode = CutMode(m_mode);
     if (mode == CutMode::cutPlanar || mode == CutMode::cutTongueAndGroove) {
-        const bool has_connectors = !connectors.empty();
 
         m_imgui->disabled_begin(has_connectors);
         if (render_cut_mode_combo())
@@ -2659,7 +2663,6 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
         render_move_center_input(Z);
         ImGui::SameLine();
 
-        const bool is_cut_plane_init = m_rotation_m.isApprox(Transform3d::Identity()) && m_bb_center.isApprox(m_plane_center);
         m_imgui->disabled_begin(is_cut_plane_init);
             std::string act_name = _u8L("Reset cutting plane");
             if (render_reset_button("cut_plane", act_name)) {
@@ -2668,25 +2671,12 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
             }
         m_imgui->disabled_end();
 
-//        render_flip_plane_button();
-
         if (mode == CutMode::cutPlanar) {
             add_vertical_scaled_interval(0.75f);
 
             m_imgui->disabled_begin(!m_keep_upper || !m_keep_lower || m_keep_as_parts || (m_part_selection.valid() && m_part_selection.is_one_object()));
                 if (m_imgui->button(has_connectors ? _L("Edit connectors") : _L("Add connectors")))
                     set_connectors_editing(true);
-            m_imgui->disabled_end();
-
-            ImGui::SameLine(1.5f * m_control_width);
-
-            m_imgui->disabled_begin(is_cut_plane_init && !has_connectors);
-                act_name = _u8L("Reset cut");
-                if (m_imgui->button(wxString::FromUTF8(act_name), _L("Reset cutting plane and remove connectors"))) {
-                    Plater::TakeSnapshot snapshot(wxGetApp().plater(), act_name, UndoRedo::SnapshotType::GizmoAction);
-                    reset_cut_plane();
-                    reset_connectors();
-                }
             m_imgui->disabled_end();
         }
         else if (mode == CutMode::cutTongueAndGroove) {
@@ -2759,10 +2749,19 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
     }
 
     ImGui::Separator();
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
     TooltipButton(x, y);
+    
+    if (mode == CutMode::cutPlanar) {
+        m_imgui->disabled_begin(is_cut_plane_init && !has_connectors);
+        ImGui::SameLine();
+        if (m_imgui->button(_L("Reset"), _L("Reset cutting plane and remove connectors"))) {
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset Cut", UndoRedo::SnapshotType::GizmoAction);
+            reset_cut_plane();
+            reset_connectors();
+        }
+        m_imgui->disabled_end();
+    }
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Perform cut"), _L("Cancel")});

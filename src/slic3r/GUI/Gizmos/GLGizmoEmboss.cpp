@@ -1296,10 +1296,18 @@ void fix_transformation(const StyleManager::Style& from, const StyleManager::Sty
 }
 } // namespace
 
-void GLGizmoEmboss::reset_options()
-{
-    const StyleManager::Style& current_style = m_style_manager.get_style();
+bool GLGizmoEmboss::is_changed_from_default_style() {
     int default_index = 0;
+    const StyleManager::Style& default_style = m_style_manager.get_styles()[default_index];
+    const StyleManager::Style& current_style = m_style_manager.get_style();
+
+    return default_style == current_style;
+}
+
+void GLGizmoEmboss::reset_to_default_style()
+{
+    int default_index = 0;
+    const StyleManager::Style& current_style = m_style_manager.get_style();
     const StyleManager::Style& default_style = m_style_manager.get_styles()[default_index];
 
     StyleManager::Style cur_s = current_style; // copy
@@ -1400,21 +1408,41 @@ void GLGizmoEmboss::draw_window(float x, float y)
     ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, m_gui_cfg->indent);
     ScopeGuard indent_sc([](){ ImGui::PopStyleVar(/*ImGuiStyleVar_IndentSpacing*/); });
 
+
     // Disable all except selection of font, when open text from 3mf with unknown font
     m_imgui->disabled_begin(m_is_unknown_font);
     ScopeGuard unknown_font_sc([imgui = m_imgui]() { imgui->disabled_end(/*m_is_unknown_font*/); });
-
+    
     draw_text_input();
 
-    ImGui::Indent();
-        // When unknown font is inside .3mf only font selection is allowed
-        m_imgui->disabled_end(/*m_is_unknown_font*/);
-        draw_font_list_line();
-        m_imgui->disabled_begin(m_is_unknown_font);
-        bool use_inch = wxGetApp().app_config->get_bool("use_inches");
-        draw_height(use_inch);
-        draw_depth(use_inch);
-    ImGui::Unindent();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    float bbl_combobox_padding = (4 * f_scale);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 6.0f - bbl_combobox_padding));
+
+    draw_style_list();
+        
+    // When unknown font is inside .3mf only font selection is allowed
+    m_imgui->disabled_end(/*m_is_unknown_font*/);
+    draw_font_list_line();
+    m_imgui->disabled_begin(m_is_unknown_font);
+
+    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing (compensate bbl_combobox_padding)
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 6.0f));
+
+    bool use_inch = wxGetApp().app_config->get_bool("use_inches");
+    draw_height(use_inch);
+    draw_depth(use_inch);
+
+    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
+    ImGui::Spacing();
+
+    // Do not select volume type, when it is text object
+    if (!m_volume->is_the_only_one_part()) {
+        ImGui::Separator();
+        draw_model_type();
+    }
+
+    ImGui::Separator();
 
     // close advanced style property when unknown font is selected
     if (m_is_unknown_font && m_is_advanced_edit_style) 
@@ -1434,25 +1462,16 @@ void GLGizmoEmboss::draw_window(float x, float y)
     }
 
     ImGui::Separator();
-
-    draw_style_list();
-
-    // Do not select volume type, when it is text object
-    if (!m_volume->is_the_only_one_part()) {
-        ImGui::Separator();
-        draw_model_type();
-    }
-
-    ImGui::Separator();
-    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
     GLGizmoUtils::TooltipButton(m_imgui, m_parent, m_shortcuts, x, y);
 
     ImGui::SameLine();
+    m_imgui->disabled_begin(is_changed_from_default_style());
     if (m_imgui->button(_L("Reset"), _L("Reset all options except the text and operation"))) {
-        reset_options();
+        reset_to_default_style();
     }
+    m_imgui->disabled_end();
 
     ImGui::SameLine();
     GLGizmoUtils::BeginRightAlignedButtons({_L("Done")});
@@ -2214,13 +2233,17 @@ void GLGizmoEmboss::draw_style_list() {
         trunc_name = ImGuiWrapper::trunc(current_name, max_style_name_width);
     }
 
+    ImGui::AlignTextToFramePadding();
+
     std::string title = _u8L("Style");
     if (m_style_manager.exist_stored_style())
         ImGui::Text("%s", title.c_str());
     else
         ImGui::TextColored(ImGuiWrapper::COL_ORCA, "%s", title.c_str());
         
-    ImGui::SetNextItemWidth(m_gui_cfg->input_width);
+    ImGui::SameLine(m_gui_cfg->input_offset);
+
+    ImGui::SetNextItemWidth(2 * m_gui_cfg->input_width);
     auto add_text_modify = [&is_modified](const std::string& name) {
         if (!is_modified) return name;
         return name + Preset::suffix_modified();
@@ -2228,6 +2251,8 @@ void GLGizmoEmboss::draw_style_list() {
     std::optional<size_t> selected_style_index;
     std::string tooltip = "";
     ImGuiWrapper::push_combo_style(m_parent.get_scale());
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 16.0f));
+
     if (ImGui::BBLBeginCombo("##style_selector", add_text_modify(trunc_name).c_str())) {
         m_style_manager.init_style_images(m_gui_cfg->max_style_image_size, m_text);
         m_style_manager.init_trunc_names(max_style_name_width);
@@ -2283,7 +2308,10 @@ void GLGizmoEmboss::draw_style_list() {
                 GUI::format(_L("Current style is \"%1%\""), current_style.name);
         }
     }
+
+    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
     ImGuiWrapper::pop_combo_style();
+
     if (!tooltip.empty())
         m_imgui->tooltip(tooltip, m_gui_cfg->max_tooltip_width);
         
@@ -2683,6 +2711,9 @@ void GLGizmoEmboss::draw_advanced()
         return;
     }
 
+    ImGui::Indent(6.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10.0f, 6.0f)); 
+
     FontProp &font_prop = m_style_manager.get_font_prop();
     const FontFile::Info &font_info = get_font_info(*ff.font_file, font_prop);
 #ifdef SHOW_FONT_FILE_PROPERTY
@@ -3028,6 +3059,10 @@ void GLGizmoEmboss::draw_advanced()
     } else if (ImGui::IsItemHovered()) {
         m_imgui->tooltip(_u8L("Orient the text towards the camera."), m_gui_cfg->max_tooltip_width);
     }
+
+    ImGui::Unindent();
+    ImGui::Spacing();
+    ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
     //ImGui::SameLine(); if (ImGui::Button("Re-emboss")) GLGizmoEmboss::re_emboss(*m_volume);    
 

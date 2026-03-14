@@ -548,8 +548,7 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
                 m_horizontal_only = false;
             }
         }
-        ImGui::SameLine(circle_max_width);
-        ImGui::PushItemWidth(sliders_width);
+
         if (m_imgui->bbl_checkbox(_L("Horizontal"), m_horizontal_only)) {
             if (m_horizontal_only) {
                 m_vertical_only = false;

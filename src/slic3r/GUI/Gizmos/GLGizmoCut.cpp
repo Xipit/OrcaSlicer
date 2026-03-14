@@ -2672,7 +2672,7 @@ void GLGizmoCut3D::render_cut_plane_input_window(CutConnectors &connectors, floa
         m_imgui->disabled_end();
 
         if (mode == CutMode::cutPlanar) {
-            add_vertical_scaled_interval(0.75f);
+            ImGui::Separator();
 
             m_imgui->disabled_begin(!m_keep_upper || !m_keep_lower || m_keep_as_parts || (m_part_selection.valid() && m_part_selection.is_one_object()));
                 if (m_imgui->button(has_connectors ? _L("Edit connectors") : _L("Add connectors")))

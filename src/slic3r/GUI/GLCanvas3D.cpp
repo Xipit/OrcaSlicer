@@ -1197,12 +1197,13 @@ GLCanvas3D::GLCanvas3D(wxGLCanvas* canvas, Bed3D &bed)
 
     m_selection.set_volumes(&m_volumes.volumes);
 
+
     const wxString alt   = GUI::shortkey_alt_prefix();
 
     m_shortcuts_assembly_view = {
         {_L("Left mouse button"),       _L("object selection")},
         {alt + _L("Left mouse button"), _L("part selection")},
-        {"1~16 " + _L("number keys"),   _L("number keys can quickly change the color of objects")},
+        {"1~16 " + _L("number keys"),   _L("Number keys can quickly change the color of objects")},
     };
 }
 

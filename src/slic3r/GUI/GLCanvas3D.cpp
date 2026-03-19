@@ -33,6 +33,7 @@
 #include "format.hpp"
 #include "DailyTips.hpp"
 #include "FilamentMapDialog.hpp"
+#include "Gizmos/GLGizmoUtils.hpp"
 
 #include "slic3r/GUI/Gizmos/GLGizmoPainterBase.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
@@ -254,7 +255,7 @@ void GLCanvas3D::LayersEditing::show_tooltip_information(const GLCanvas3D& canva
     ImGui::PopStyleVar(2);
 }
 
-void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanvas3D& canvas) {
+void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(GLCanvas3D& canvas) {
     if (!m_enabled)
         return;
 
@@ -360,9 +361,25 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanv
         {_L("Mouse wheel:"), _L("Increase/decrease edit area")}
     };
     show_tooltip_information(canvas, captions_texts, x, get_cur_y);
+
     ImGui::SameLine();
-    if (imgui.button(_L("Reset")))
-        wxPostEvent((wxEvtHandler*)canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+    imgui.disabled_begin(check_object_layers_fixed(*m_slicing_parameters, m_layer_height_profile));
+    if (imgui.button(_L("Reset"))) {
+        wxPostEvent((wxEvtHandler*) canvas.get_wxglcanvas(), SimpleEvent(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE));
+    }
+    imgui.disabled_end();
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (imgui.button(_L("Done"))) {
+        m_enabled = false;
+
+        GLToolbarItem* item = canvas.m_main_toolbar.get_item("layersediting");
+        item->set_state(GLToolbarItem::Normal);
+
+        canvas.set_as_dirty();
+        canvas.request_extra_frame();
+    }
 
     GLCanvas3D::LayersEditing::s_overlay_window_width = ImGui::GetWindowSize().x;
     imgui.end();
@@ -370,7 +387,7 @@ void GLCanvas3D::LayersEditing::render_variable_layer_height_dialog(const GLCanv
     imgui.pop_toolbar_style();
 }
 
-void GLCanvas3D::LayersEditing::render_overlay(const GLCanvas3D& canvas)
+void GLCanvas3D::LayersEditing::render_overlay(GLCanvas3D& canvas)
 {
     render_variable_layer_height_dialog(canvas);
     render_active_object_annotations(canvas);

@@ -4,6 +4,7 @@
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/Gizmos/GizmoObjectManipulation.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
+#include "GLGizmoUtils.hpp"
 
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/MeasureUtils.hpp"
@@ -2175,9 +2176,11 @@ void GLGizmoMeasure::on_render_input_window(float x, float y, float bottom_limit
 
     ImGui::Separator();
     show_distance_xyz_ui();
-    ImGui::Separator();
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
+    ImGui::Separator();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     float get_cur_y = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
     float caption_max    = 0.f;
     float total_text_max = 0.f;
@@ -2186,7 +2189,15 @@ void GLGizmoMeasure::on_render_input_window(float x, float y, float bottom_limit
         total_text_max = std::max(total_text_max, m_imgui->calc_text_size(m_desc[t]).x);
     }
     show_tooltip_information(caption_max, x, get_cur_y);
-    ImGui::PopStyleVar(1);
+    
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+    
+    ImGui::PopStyleVar(1); // ImGuiStyleVar_FramePadding
+
     if (last_feature != m_curr_feature || last_mode != m_mode || last_selected_features != m_selected_features) {
         // the dialog may have changed its size, ask for an extra frame to render it properly
         last_feature = m_curr_feature;

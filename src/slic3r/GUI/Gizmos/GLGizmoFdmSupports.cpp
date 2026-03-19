@@ -14,6 +14,7 @@
 #include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
+#include "GLGizmoUtils.hpp"
 
 #include <GL/glew.h>
 
@@ -285,6 +286,8 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
     if (ImGui::IsItemHovered())
         m_imgui->tooltip(format_wxstr(_L("Allows painting only on facets selected by: \"%1%\""), m_desc["highlight_by_angle"]), max_tooltip_width);
     ImGui::Separator();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
     if (m_current_tool != old_tool)
         this->tool_changed(old_tool, m_current_tool);
@@ -345,6 +348,19 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         ImGui::SameLine(drag_left_width);
         ImGui::PushItemWidth(1.5 * slider_icon_width);
         ImGui::BBLDragFloat("##gap_area_input", &TriangleSelectorPatch::gap_area, 0.05f, 0.0f, 0.0f, "%.2f");
+
+        // Apply gap fill button
+        if (m_imgui->button(m_desc.at("perform"))) {
+            Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
+
+            for (int i = 0; i < m_triangle_selectors.size(); i++) {
+                TriangleSelectorPatch* ts_mm = dynamic_cast<TriangleSelectorPatch*>(m_triangle_selectors[i].get());
+                ts_mm->update_selector_triangles();
+                ts_mm->request_update_render_data(true);
+            }
+            update_model_object();
+            m_parent.set_as_dirty();
+        }
     }
 
     float position_before_text_y = ImGui::GetCursorPos().y;
@@ -411,33 +427,13 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
     }
 
     ImGui::Separator();
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
+
     float get_cur_y = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
-    show_tooltip_information(caption_max, x, get_cur_y);
-
-    float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+    show_tooltip_information(caption_max, x, get_cur_y); 
 
     ImGui::SameLine();
-
-    // Perform button is for gap fill
-    if (m_current_tool == ImGui::GapFillIcon) {
-        if (m_imgui->button(m_desc.at("perform"))) {
-            Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
-
-            for (int i = 0; i < m_triangle_selectors.size(); i++) {
-                TriangleSelectorPatch* ts_mm = dynamic_cast<TriangleSelectorPatch*>(m_triangle_selectors[i].get());
-                ts_mm->update_selector_triangles();
-                ts_mm->request_update_render_data(true);
-            }
-            update_model_object();
-            m_parent.set_as_dirty();
-        }
-    }
-
-    ImGui::SameLine();
-
-    if (m_imgui->button(m_desc.at("remove_all"))) {
+    m_imgui->disabled_begin(m_c->selection_info()->model_object()->is_fdm_support_painted() == false);
+    if (m_imgui->button(_L("Reset"), m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
         ModelObject *        mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
@@ -451,8 +447,15 @@ void GLGizmoFdmSupports::on_render_input_window(float x, float y, float bottom_l
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(2);
+    m_imgui->disabled_end();
 
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    ImGui::PopStyleVar(1); // ImGuiStyleVar_FramePadding
     GizmoImguiEnd();
 
     // BBS

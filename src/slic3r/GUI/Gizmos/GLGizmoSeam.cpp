@@ -10,6 +10,7 @@
 #include "slic3r/GUI/GUI_ObjectList.hpp"
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
+#include "GLGizmoUtils.hpp"
 
 #include <GL/glew.h>
 
@@ -285,17 +286,17 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
     m_imgui->bbl_checkbox(_L("Vertical"), m_vertical_only);
 
     ImGui::Separator();
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 10.0f));
-    float get_cur_y = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
-    show_tooltip_information(caption_max, x, get_cur_y);
-
     float f_scale =m_parent.get_gizmos_manager().get_layout_scale();
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
 
+    float get_cur_y = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
+    show_tooltip_information(caption_max, x, get_cur_y);
+
     ImGui::SameLine();
 
-    if (m_imgui->button(m_desc.at("remove_all"))) {
+    ImGui::SameLine();
+    m_imgui->disabled_begin(m_c->selection_info()->model_object()->is_seam_painted() == false);
+    if (m_imgui->button(_L("Reset"), m_desc.at("remove_all"))) {
         Plater::TakeSnapshot snapshot(wxGetApp().plater(), "Reset selection", UndoRedo::SnapshotType::GizmoAction);
         ModelObject         *mo  = m_c->selection_info()->model_object();
         int                  idx = -1;
@@ -309,7 +310,15 @@ void GLGizmoSeam::on_render_input_window(float x, float y, float bottom_limit)
         update_model_object();
         m_parent.set_as_dirty();
     }
-    ImGui::PopStyleVar(2);
+    m_imgui->disabled_end();
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    ImGui::PopStyleVar(1); // ImGuiStyleVar_FramePadding
     GizmoImguiEnd();
 
     //BBS

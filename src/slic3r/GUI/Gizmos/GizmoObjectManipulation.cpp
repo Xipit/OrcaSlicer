@@ -15,6 +15,7 @@
 #include "slic3r/GUI/Selection.hpp"
 #include "slic3r/GUI/Plater.hpp"
 #include "slic3r/GUI/MainFrame.hpp"
+#include "GLGizmoUtils.hpp"
 
 #include <boost/algorithm/string.hpp>
 
@@ -733,7 +734,7 @@ void GizmoObjectManipulation::show_move_tooltip_information(ImGuiWrapper *imgui_
     #endif // WIN32
     ImVec2 button_size = ImVec2(25 * scale, 25 * scale); // ORCA: Use exact resolution will prevent blur on icon
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, ImGui::GetStyle().FramePadding.y});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::ImageButton3(normal_id, hover_id, button_size);
 
     if (ImGui::IsItemHovered()) {
@@ -765,7 +766,7 @@ void GizmoObjectManipulation::show_rotate_tooltip_information(ImGuiWrapper *imgu
     #endif // WIN32
     ImVec2 button_size = ImVec2(25 * scale, 25 * scale); // ORCA: Use exact resolution will prevent blur on icon
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, ImGui::GetStyle().FramePadding.y});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::ImageButton3(normal_id, hover_id, button_size);
 
     if (ImGui::IsItemHovered()) {
@@ -797,7 +798,7 @@ void GizmoObjectManipulation::show_scale_tooltip_information(ImGuiWrapper *imgui
     #endif // WIN32
     ImVec2 button_size = ImVec2(25 * scale, 25 * scale); // ORCA: Use exact resolution will prevent blur on icon
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, ImGui::GetStyle().FramePadding.y});
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
     ImGui::ImageButton3(normal_id, hover_id, button_size);
 
     if (ImGui::IsItemHovered()) {
@@ -957,6 +958,13 @@ void GizmoObjectManipulation::do_render_move_window(ImGuiWrapper *imgui_wrapper,
         }
     }
     if (!focued_on_text) m_glcanvas.handle_sidebar_focus_event("", false);
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     float get_cur_y      = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
     float tip_caption_max    = 0.f;
     float total_text_max = 0.f;
@@ -965,10 +973,17 @@ void GizmoObjectManipulation::do_render_move_window(ImGuiWrapper *imgui_wrapper,
         total_text_max = std::max(total_text_max, imgui_wrapper->calc_text_size(m_desc_move[t]).x);
     }
     show_move_tooltip_information(imgui_wrapper, tip_caption_max, x, get_cur_y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
+
     m_last_active_item = current_active_id;
     last_move_input_window_width = ImGui::GetWindowWidth();
     imgui_wrapper->end();
-    ImGui::PopStyleVar(1);
+    ImGui::PopStyleVar(2);
     ImGuiWrapper::pop_toolbar_style();
 }
 
@@ -1154,6 +1169,12 @@ void GizmoObjectManipulation::do_render_rotate_window(ImGuiWrapper *imgui_wrappe
     if (!focued_on_text  && !absolute_focued_on_text)
         m_glcanvas.handle_sidebar_focus_event("", false);
 
+    ImGui::Spacing(); // needed after Text
+    ImGui::Separator();
+    ImGui::Spacing();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     float get_cur_y       = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
     float tip_caption_max = 0.f;
     float total_text_max  = 0.f;
@@ -1162,12 +1183,19 @@ void GizmoObjectManipulation::do_render_rotate_window(ImGuiWrapper *imgui_wrappe
         total_text_max  = std::max(total_text_max, imgui_wrapper->calc_text_size(m_desc_move[t]).x);
     }
     show_rotate_tooltip_information(imgui_wrapper, tip_caption_max, x, get_cur_y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
+
     m_last_active_item = current_active_id;
     last_rotate_input_window_width = ImGui::GetWindowWidth();
     imgui_wrapper->end();
 
     // BBS
-    ImGui::PopStyleVar(1);
+    ImGui::PopStyleVar(2);
     ImGuiWrapper::pop_toolbar_style();
 }
 
@@ -1322,7 +1350,6 @@ void GizmoObjectManipulation::do_render_scale_input_window(ImGuiWrapper* imgui_w
     if (display_size.x() > 0 && display_size.y() > 0 && display_size.z() > 0) {
         m_buffered_size = display_size;
     }
-    ImGui::Separator();
     ImGui::AlignTextToFramePadding();
     bool is_avoid_one_update{false};
     if (combox_changed) {
@@ -1394,6 +1421,11 @@ void GizmoObjectManipulation::do_render_scale_input_window(ImGuiWrapper* imgui_w
         }
     if (!focued_on_text)
         m_glcanvas.handle_sidebar_focus_event("", false);
+
+    ImGui::Separator();
+    float f_scale = m_glcanvas.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
     float get_cur_y       = ImGui::GetContentRegionMax().y + ImGui::GetFrameHeight() + y;
     float tip_caption_max = 0.f;
     float total_text_max  = 0.f;
@@ -1402,12 +1434,20 @@ void GizmoObjectManipulation::do_render_scale_input_window(ImGuiWrapper* imgui_w
         total_text_max  = std::max(total_text_max, imgui_wrapper->calc_text_size(m_desc_scale[t]).x);
     }
     show_scale_tooltip_information(imgui_wrapper, tip_caption_max, x, get_cur_y);
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+    if (imgui_wrapper->button(_L("Done"))) {
+        m_glcanvas.reset_all_gizmos();
+    }
+
     m_last_active_item = current_active_id;
 
     last_scale_input_window_width = ImGui::GetWindowWidth();
     imgui_wrapper->end();
 
     //BBS
+    ImGui::PopStyleVar(1);
     ImGuiWrapper::pop_toolbar_style();
 }
 

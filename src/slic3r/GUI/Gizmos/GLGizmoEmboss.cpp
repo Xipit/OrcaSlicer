@@ -15,6 +15,7 @@
 #include "slic3r/GUI/Jobs/NotificationProgressIndicator.hpp"
 #include "slic3r/Utils/WxFontUtils.hpp"
 #include "slic3r/Utils/UndoRedo.hpp"
+#include "GLGizmoUtils.hpp"
 
 #include "libslic3r/Geometry.hpp" // to range pi pi
 #include "libslic3r/Timer.hpp" 
@@ -1262,6 +1263,59 @@ void GLGizmoEmboss::reset_volume()
     remove_notification_not_valid_font();
 }
 
+namespace {
+// FIX IT: It should not change volume position before successfull change volume by process
+void fix_transformation(const StyleManager::Style& from, const StyleManager::Style& to, GLCanvas3D& canvas)
+{
+    // fix Z rotation when exists difference in styles
+    const std::optional<float>& f_angle_opt = from.angle;
+    const std::optional<float>& t_angle_opt = to.angle;
+    if (!is_approx(f_angle_opt, t_angle_opt)) {
+        // fix rotation
+        float f_angle = f_angle_opt.value_or(.0f);
+        float t_angle = t_angle_opt.value_or(.0f);
+        do_local_z_rotate(canvas.get_selection(), t_angle - f_angle);
+        std::string no_snapshot;
+        canvas.do_rotate(no_snapshot);
+    }
+
+    // fix distance (Z move) when exists difference in styles
+    const std::optional<float>& f_move_opt = from.distance;
+    const std::optional<float>& t_move_opt = to.distance;
+    if (!is_approx(f_move_opt, t_move_opt)) {
+        float f_move = f_move_opt.value_or(.0f);
+        float t_move = t_move_opt.value_or(.0f);
+        do_local_z_move(canvas.get_selection(), t_move - f_move);
+        std::string no_snapshot;
+        canvas.do_move(no_snapshot);
+    }
+}
+} // namespace
+
+bool GLGizmoEmboss::is_changed_from_default_style()
+{
+    int                        default_index = 0;
+    const StyleManager::Style& default_style = m_style_manager.get_styles()[default_index];
+    const StyleManager::Style& current_style = m_style_manager.get_style();
+
+    return default_style == current_style;
+}
+
+void GLGizmoEmboss::reset_to_default_style()
+{
+    int                        default_index = 0;
+    const StyleManager::Style& current_style = m_style_manager.get_style();
+    const StyleManager::Style& default_style = m_style_manager.get_styles()[default_index];
+
+    StyleManager::Style cur_s = current_style; // copy
+    StyleManager::Style new_s = default_style; // copy
+
+    if (m_style_manager.load_style(default_index)) {
+        ::fix_transformation(cur_s, new_s, m_parent);
+        process();
+    }
+}
+
 void GLGizmoEmboss::calculate_scale() {
     Transform3d to_world = m_parent.get_selection().get_first_volume()->world_matrix();
     auto to_world_linear = to_world.linear();
@@ -1393,6 +1447,25 @@ void GLGizmoEmboss::draw_window()
         ImGui::Separator();
         draw_model_type();
     }
+
+    ImGui::Separator();
+    float f_scale = m_parent.get_gizmos_manager().get_layout_scale();
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f, 4.0f * f_scale));
+
+    m_imgui->disabled_begin(is_changed_from_default_style());
+    if (m_imgui->button(_L("Reset"), _L("Reset all options except the text and operation"))) {
+        reset_to_default_style();
+    }
+    m_imgui->disabled_end();
+
+    ImGui::SameLine();
+    GLGizmoUtils::begin_right_aligned_buttons({_L("Done")});
+
+    if (m_imgui->button(_L("Done"))) {
+        m_parent.reset_all_gizmos();
+    }
+
+    ImGui::PopStyleVar(1);
        
 #ifdef SHOW_WX_FONT_DESCRIPTOR
     if (is_selected_style)
@@ -2123,34 +2196,6 @@ void GLGizmoEmboss::draw_delete_style_button() {
         m_imgui->tooltip(tooltip, m_gui_cfg->max_tooltip_width);  
     }
 }
-
-namespace {
-// FIX IT: It should not change volume position before successfull change volume by process
-void fix_transformation(const StyleManager::Style &from, const StyleManager::Style &to, GLCanvas3D &canvas) {
-    // fix Z rotation when exists difference in styles
-    const std::optional<float> &f_angle_opt = from.angle;
-    const std::optional<float> &t_angle_opt = to.angle;
-    if (!is_approx(f_angle_opt, t_angle_opt)) {
-        // fix rotation
-        float f_angle = f_angle_opt.value_or(.0f);
-        float t_angle = t_angle_opt.value_or(.0f);
-        do_local_z_rotate(canvas.get_selection(), t_angle - f_angle);
-        std::string no_snapshot;
-        canvas.do_rotate(no_snapshot);
-    }
-
-    // fix distance (Z move) when exists difference in styles
-    const std::optional<float> &f_move_opt = from.distance;
-    const std::optional<float> &t_move_opt = to.distance;
-    if (!is_approx(f_move_opt, t_move_opt)) {
-        float f_move = f_move_opt.value_or(.0f);
-        float t_move = t_move_opt.value_or(.0f);
-        do_local_z_move(canvas.get_selection(), t_move - f_move);
-        std::string no_snapshot;
-        canvas.do_move(no_snapshot);
-    }
-}
-} // namesapce
 
 void GLGizmoEmboss::draw_style_list() {
     if (!m_style_manager.is_active_font()) return;

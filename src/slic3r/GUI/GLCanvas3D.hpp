@@ -290,8 +290,8 @@ class GLCanvas3D
         void set_enabled(bool enabled) { m_enabled = is_allowed() && enabled; }
 
         void show_tooltip_information(const GLCanvas3D& canvas, std::map<wxString, wxString> captions_texts, float x, float y);
-        void render_variable_layer_height_dialog(const GLCanvas3D& canvas);
-        void render_overlay(const GLCanvas3D& canvas);
+        void render_variable_layer_height_dialog(GLCanvas3D& canvas);
+        void render_overlay(GLCanvas3D& canvas);
         void render_volumes(const GLCanvas3D& canvas, const GLVolumeCollection& volumes);
 
         void adjust_layer_height_profile();

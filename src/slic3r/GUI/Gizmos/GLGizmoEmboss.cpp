@@ -1846,7 +1846,8 @@ void GLGizmoEmboss::draw_font_list()
 
 void GLGizmoEmboss::draw_model_type()
 {
-    ImGui::AlignTextToFramePadding();
+    ImGui::Spacing();
+
     bool is_last_solid_part = m_volume->is_the_only_one_part();
     std::string title = _u8L("Operation");
     if (is_last_solid_part) {
@@ -1863,13 +1864,18 @@ void GLGizmoEmboss::draw_model_type()
     ModelVolumeType type = m_volume->type();
 
     //TRN EmbossOperation
+    float minimum_spacing_x = 8.0f;
+    float minimum_offset_x  = ImGui::GetCursorPosX() + minimum_spacing_x;
+    float offset_x          = std::max(m_gui_cfg->input_offset, minimum_offset_x);
+    ImGui::SameLine(offset_x);
+    
     ImGuiWrapper::push_radio_style(m_parent.get_scale()); // ORCA
     if (ImGui::RadioButton(_u8L("Join").c_str(), type == part))
         new_type = part;
     else if (ImGui::IsItemHovered())
         m_imgui->tooltip(_u8L("Click to change text into object part."), m_gui_cfg->max_tooltip_width);
-    ImGui::SameLine();
 
+    ImGui::SameLine();
     std::string last_solid_part_hint = _u8L("You can't change a type of the last solid part of the object.");
     if (ImGui::RadioButton(_CTX_utf8(L_CONTEXT("Cut", "EmbossOperation"), "EmbossOperation").c_str(), type == negative))
         new_type = negative;

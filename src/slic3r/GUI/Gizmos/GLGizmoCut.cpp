@@ -2877,7 +2877,16 @@ void GLGizmoCut3D::init_input_window_data(CutConnectors &connectors)
 
 void GLGizmoCut3D::render_input_window_warning() const
 {
-    if (! m_invalid_connectors_idxs.empty()) {
+    const bool invalid_connector_warning = !m_invalid_connectors_idxs.empty();
+    const bool keep_after_cut_warning    = !m_keep_upper && !m_keep_lower;
+    const bool invalid_contour_warning   = !has_valid_contour();
+    const bool invalid_groove_warning    = !has_valid_groove();
+
+    if (invalid_connector_warning || keep_after_cut_warning || invalid_contour_warning || invalid_groove_warning) {
+        ImGui::Separator();
+    }
+
+    if (invalid_connector_warning) {
         wxString out = /*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Invalid connectors detected") + ":";
         if (m_info_stats.outside_cut_contour > size_t(0))
             out += "\n - " + format_wxstr(_L_PLURAL("%1$d connector is out of cut contour", "%1$d connectors are out of cut contour", m_info_stats.outside_cut_contour),
@@ -2889,11 +2898,11 @@ void GLGizmoCut3D::render_input_window_warning() const
             out += "\n - " + _L("Some connectors are overlapped");
         m_imgui->warning_text(out);
     }
-    if (!m_keep_upper && !m_keep_lower)
+    if (keep_after_cut_warning)
         m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Select at least one object to keep after cutting."));
-    if (!has_valid_contour())
+    if (invalid_contour_warning)
         m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane is placed out of object"));
-    else if (!has_valid_groove())
+    else if (invalid_groove_warning)
         m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane with groove is invalid"));
 }
 

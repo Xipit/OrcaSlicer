@@ -1918,18 +1918,6 @@ void GLGizmoMeasure::show_selection_ui()
     if (m_show_reset_first_tip) {
         m_imgui->text(_L("Feature 1 has been reset, \nfeature 2 has been feature 1"));
     }
-    if (m_selected_wrong_feature_waring_tip) {
-        if (m_measure_mode == EMeasureMode::ONLY_ASSEMBLY) {
-            if (m_assembly_mode == AssemblyMode::FACE_FACE) {
-                m_imgui->warning_text(_L("Warning: please select Plane's feature."));
-            } else if (m_assembly_mode == AssemblyMode::POINT_POINT) {
-                m_imgui->warning_text(_L("Warning: please select Point's or Circle's feature."));
-            }
-        }
-    }
-    if (m_measure_mode == EMeasureMode::ONLY_ASSEMBLY && m_hit_different_volumes.size() == 1) {
-        m_imgui->warning_text(_L("Warning: please select two different meshes."));
-    }
 }
 
 void GLGizmoMeasure::show_distance_xyz_ui()

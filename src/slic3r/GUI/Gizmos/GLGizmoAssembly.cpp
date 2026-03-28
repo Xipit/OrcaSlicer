@@ -126,7 +126,6 @@ void GLGizmoAssembly::on_render_input_window(float x, float y, float bottom_limi
         m_parent.reset_all_gizmos();
     }
     
-    ImGui::Separator();
     render_input_window_warning(m_same_model_object);
 
     ImGui::PopStyleVar(1); // ImGuiStyleVar_FramePadding
@@ -146,13 +145,30 @@ void GLGizmoAssembly::on_render_input_window(float x, float y, float bottom_limi
 
 void GLGizmoAssembly::render_input_window_warning(bool same_model_object)
 {
-    if (wxGetApp().plater()->canvas3D()->get_canvas_type() == GLCanvas3D::ECanvasType::CanvasView3D) {
-        if (m_hit_different_volumes.size() == 2) {
-            if (same_model_object == false) {
-                m_imgui->warning_text(_L("Warning") + ": " +
-               _L("It is recommended to assemble the objects first,\nbecause the objects is restriced to bed \nand only parts can be lifted."));
-            }
+    const bool same_mesh_warning        = m_hit_different_volumes.size() == 1;
+    const bool wrong_feature_warning    = m_selected_wrong_feature_waring_tip;
+    const bool not_assembled_warning    = m_hit_different_volumes.size() == 2 && same_model_object == false &&
+                                        wxGetApp().plater()->canvas3D()->get_canvas_type() == GLCanvas3D::ECanvasType::CanvasView3D;
+
+    if (same_mesh_warning || not_assembled_warning || wrong_feature_warning) {
+        ImGui::Separator();
+    }
+
+    if (same_mesh_warning) {
+        m_imgui->warning_text(_L("Warning: please select two different meshes."));
+    }
+    if (wrong_feature_warning) {
+        if (m_assembly_mode == AssemblyMode::FACE_FACE) {
+            m_imgui->warning_text(_L("Warning: please select Plane's feature."));
+        } else if (m_assembly_mode == AssemblyMode::POINT_POINT) {
+            m_imgui->warning_text(_L("Warning: please select Point's or Circle's feature."));
         }
+    }
+    if (not_assembled_warning) {
+        m_imgui->warning_text(
+            _L("Warning") + ": " +
+            _L("It is recommended to assemble the objects first,\nbecause the objects is restriced to bed \nand only parts can be lifted.")
+        );
     }
 }
 

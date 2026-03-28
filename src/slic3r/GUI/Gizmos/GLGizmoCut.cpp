@@ -2887,14 +2887,14 @@ void GLGizmoCut3D::render_input_window_warning() const
                                            m_info_stats.outside_bb);
         if (m_info_stats.is_overlap)
             out += "\n - " + _L("Some connectors are overlapped");
-        m_imgui->text(out);
+        m_imgui->warning_text(out);
     }
     if (!m_keep_upper && !m_keep_lower)
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Select at least one object to keep after cutting."));
+        m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Select at least one object to keep after cutting."));
     if (!has_valid_contour())
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane is placed out of object"));
+        m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane is placed out of object"));
     else if (!has_valid_groove())
-        m_imgui->text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane with groove is invalid"));
+        m_imgui->warning_text(/*wxString(ImGui::WarningMarkerSmall)*/ _L("Warning") + ": " + _L("Cut plane with groove is invalid"));
 }
 
 void GLGizmoCut3D::on_render_input_window(float x, float y, float bottom_limit)

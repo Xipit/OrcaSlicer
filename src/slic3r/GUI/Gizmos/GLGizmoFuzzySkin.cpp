@@ -349,7 +349,7 @@ void GLGizmoFuzzySkin::on_render_input_window(float x, float y, float bottom_lim
         float font_size = ImGui::GetFontSize();
         auto link_text = [&]() {
             ImColor HyperColor = ImGuiWrapper::COL_ORCA;
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::to_ImVec4(ColorRGB::WARNING()));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::COL_WARNING);
             float parent_width = ImGui::GetContentRegionAvail().x;
             m_imgui->text_wrapped(_L("Warning: Fuzzy skin is disabled, painted fuzzy skin will not take effect!"), parent_width);
             ImGui::PopStyleColor();

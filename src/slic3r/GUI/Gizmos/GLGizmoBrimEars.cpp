@@ -769,7 +769,7 @@ void GLGizmoBrimEars::on_render_input_window(float x, float y, float bottom_limi
 
     if (brim_not_painted || has_invalid_ears) {
         ImGui::Separator();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::to_ImVec4(ColorRGB::WARNING()));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGuiWrapper::COL_WARNING);
 
         float parent_width = ImGui::GetContentRegionAvail().x;
         float font_size    = ImGui::GetFontSize();

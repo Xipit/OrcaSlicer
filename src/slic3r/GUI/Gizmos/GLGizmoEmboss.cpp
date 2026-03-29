@@ -1378,7 +1378,9 @@ void GLGizmoEmboss::draw_window()
     if (m_is_unknown_font && m_is_advanced_edit_style) 
         ImGui::SetNextTreeNodeOpen(false);
 
-    if (ImGui::TreeNode(_u8L("Advanced").c_str())) {
+    // ImGui Bug: After switching to another window and switching back, clicking the text doesnt open/close the TreeNode anymore
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_FramePadding;
+    if (ImGui::TreeNodeEx(_u8L("Advanced").c_str(), flags)) {
         if (!m_is_advanced_edit_style) {
             m_is_advanced_edit_style = true;
             m_imgui->set_requires_extra_frame();

@@ -6645,6 +6645,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
         // TODO
         // DONE always convert to multipart, split afterwards to retain relative position
         // DONE if !auto_drop move all objects over the z-position 0, so that none are clipped by the bed.
+        // DONE retain auto_drop (and printable) state when assembling or splitting objects. 
         // - when manually split to object ask users if looks_like_multipart and none have auto_drob disabled if they want to disable auto_drop for all resulting objects.
         // - add icon in object list, similar to fuzzy painting, etc.
 
@@ -6909,7 +6910,7 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
                         model_object->instances[i]->set_assemble_transformation(model_object->instances[i]->get_transformation());
                     }
                 }
-            }
+            }            
         }
     }
 
@@ -6976,7 +6977,7 @@ std::vector<size_t> Plater::priv::load_model_objects(const ModelObjectPtrs& mode
     // which is updated after a view3D->reload_scene(false, flags & (unsigned int)UpdateParams::FORCE_FULL_SCREEN_REFRESH) call
     for (const size_t idx : obj_idxs)
         wxGetApp().obj_list()->update_info_items(idx);
-
+            
     object_list_changed();
 
     this->schedule_background_process();
@@ -7469,6 +7470,8 @@ void Plater::priv::split_object(int obj_idx, bool autodrop /* = true */)
         // causing original positions not to be kept
         //BBS: set split_object to true to avoid re-compute assemble matrix
         std::vector<size_t> idxs = load_model_objects(new_objects, false, true, autodrop);
+
+        wxGetApp().plater()->get_view3D_canvas3D()->update_instance_printable_state_for_objects(idxs);
 
         // select newly added objects
         for (size_t idx : idxs)

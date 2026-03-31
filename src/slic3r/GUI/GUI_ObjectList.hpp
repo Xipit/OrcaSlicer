@@ -463,6 +463,7 @@ public:
     void on_plate_selected(int plate_index);
     void notify_instance_updated(int obj_idx);
     void object_config_options_changed(const ObjectVolumeID& ov_id);
+    void printable_state_changed(const std::vector<ModelObject*> model_objects);
     void printable_state_changed(const std::vector<ObjectVolumeID>& ov_ids);
 
     // search objectlist

@@ -913,15 +913,15 @@ void ObjectList::object_config_options_changed(const ObjectVolumeID& ov_id)
     }
 }
 
-void ObjectList::printable_state_changed(const std::vector<ObjectVolumeID>& ov_ids)
+void ObjectList::printable_state_changed(const std::vector<ModelObject*> model_objects)
 {
     std::vector<size_t> obj_idxs;
-    for (const ObjectVolumeID ov_id : ov_ids) {
-        if (ov_id.object == nullptr)
+    for (const ModelObject* mo : model_objects) {
+        if (mo == nullptr)
             continue;
 
-        ModelInstance* mi = ov_id.object->instances[0];
-        wxDataViewItem obj_item = m_objects_model->GetObjectItem(ov_id.object);
+        ModelInstance* mi       = mo->instances[0];
+        wxDataViewItem obj_item = m_objects_model->GetObjectItem(mo);
         m_objects_model->SetObjectPrintableState(mi->printable ? piPrintable : piUnprintable, obj_item);
 
         int obj_idx = m_objects_model->GetObjectIdByItem(obj_item);
@@ -936,6 +936,19 @@ void ObjectList::printable_state_changed(const std::vector<ObjectVolumeID>& ov_i
 
     // update scene
     wxGetApp().plater()->update();
+}
+
+void ObjectList::printable_state_changed(const std::vector<ObjectVolumeID>& ov_ids)
+{
+    std::vector<ModelObject*> model_objects;
+    model_objects.reserve(ov_ids.size());
+
+    for (const ObjectVolumeID& ov_id : ov_ids) {
+        if (ov_id.object != nullptr)
+            model_objects.emplace_back(ov_id.object);
+    }
+
+    printable_state_changed(model_objects);
 }
 
 void ObjectList::assembly_plate_object_name()
@@ -3044,6 +3057,17 @@ void ObjectList::merge(bool to_multipart_object)
                     volume->config.set_key_value("extruder", option->clone());
             }
 
+            // merge printable and auto_drop values
+            // non-default have priority -> if one object has printable == false, 
+            // then merged object will also have printable == false
+            if (object->instances[0]->printable == false) {
+                new_object->printable = false;
+                new_object->instances[0]->printable = false;
+            }
+            if (object->instances[0]->auto_drop == false) {
+                new_object->instances[0]->auto_drop = false;
+            }
+
             // merge layers
             for (const auto& range : object->layer_config_ranges)
                 new_object->layer_config_ranges.emplace(range);
@@ -3077,6 +3101,9 @@ void ObjectList::merge(bool to_multipart_object)
 
         // Add new object(merged) to the object_list
         add_object_to_list(m_objects->size() - 1);
+        if (new_object->printable == false) {
+            wxGetApp().obj_list()->printable_state_changed({new_object});
+        }
         select_item(m_objects_model->GetItemById(m_objects->size() - 1));
         update_selections_on_canvas();
     }

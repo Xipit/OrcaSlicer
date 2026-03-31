@@ -14,8 +14,8 @@
 
 #include "Format/AMF.hpp"
 #include "Format/svg.hpp"
-#include "Format/DRC.hpp"
 #include "Format/bbs_3mf.hpp"
+#include "Format/DRC.hpp"
 // BBS
 #include "FaceDetector.hpp"
 

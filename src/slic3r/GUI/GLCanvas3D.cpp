@@ -4906,7 +4906,6 @@ void GLCanvas3D::do_move(const std::string& snapshot_type)
         ModelObject* mo = m_model->objects[i.first];
         ModelInstance* mi  = mo->instances[i.second];
             
-        // TODO find out where instances z position is linked for move/rotate/...
         if (!mi->auto_drop) {
             continue;
         }

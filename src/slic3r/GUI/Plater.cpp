@@ -6646,7 +6646,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
         // DONE always convert to multipart, split afterwards to retain relative position
         // DONE if !auto_drop move all objects over the z-position 0, so that none are clipped by the bed.
         // DONE retain auto_drop (and printable) state when assembling or splitting objects. 
-        // - when manually split to object ask users if looks_like_multipart and none have auto_drob disabled if they want to disable auto_drop for all resulting objects.
+        // DONE when manually split to object ask users if looks_like_multipart and none have auto_drob disabled if they want to disable auto_drop for all resulting objects.
         // - add icon in object list, similar to fuzzy painting, etc.
 
         auto loaded_idxs = load_model_objects(new_model->objects, false, false, new_model_auto_drop);
@@ -7464,12 +7464,28 @@ void Plater::priv::split_object(int obj_idx, bool autodrop /* = true */)
 
         Plater::TakeSnapshot snapshot(q, "Split to Objects");
 
+        auto is_atleast_one_floating = [new_objects]() {
+            for (ModelObject* new_object : new_objects) {
+                if (new_object->get_instance_min_z(0) >= SINKING_MIN_Z_THRESHOLD) 
+                    return true;
+            }
+            return false;
+        };
+        bool split_auto_drop = autodrop;
+        if (current_model_object->instances[0]->auto_drop && is_atleast_one_floating()) {
+            MessageDialog dlg(q, _L("Disable Auto-Drop to preserve z positioning?\n"),
+                                  _L("Object with floating parts was detected"), wxICON_QUESTION | wxYES_NO);
+
+            if (dlg.ShowModal() == wxID_YES)
+                split_auto_drop = false;
+        }
+
         remove(obj_idx);
 
         // load all model objects at once, otherwise the plate would be rearranged after each one
         // causing original positions not to be kept
         //BBS: set split_object to true to avoid re-compute assemble matrix
-        std::vector<size_t> idxs = load_model_objects(new_objects, false, true, autodrop);
+        std::vector<size_t> idxs = load_model_objects(new_objects, false, true, split_auto_drop);
 
         wxGetApp().plater()->get_view3D_canvas3D()->update_instance_printable_state_for_objects(idxs);
 

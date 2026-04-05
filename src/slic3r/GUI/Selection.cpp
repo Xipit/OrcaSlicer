@@ -601,6 +601,28 @@ void Selection::set_printable(bool printable)
     wxGetApp().plater()->update();
 }
 
+bool Selection::get_auto_drop() {
+    if (!m_valid)
+        return true;
+
+    std::set<std::pair<int, int>> instances_idxs;
+    for (ObjectIdxsToInstanceIdxsMap::iterator obj_it = m_cache.content.begin(); obj_it != m_cache.content.end(); ++obj_it) {
+        for (InstanceIdxsList::reverse_iterator inst_it = obj_it->second.rbegin(); inst_it != obj_it->second.rend(); ++inst_it) {
+            instances_idxs.insert(std::make_pair(obj_it->first, *inst_it));
+        }
+    }
+
+    // return false, if one of the instances in the selection has auto_drop disabled, otherwise return true
+    for (const std::pair<int, int>& i : instances_idxs) {
+        ModelObject* object = m_model->objects[i.first];
+        for (auto inst : object->instances)
+            if (inst->auto_drop == false)
+                return false;
+    }
+
+    return true;
+}
+
 void Selection::set_auto_drop(bool enabled)
 {
     if (!m_valid)
@@ -1976,7 +1998,8 @@ void Selection::render(float scale_factor)
     m_scale_factor = scale_factor;
     // render cumulative bounding box of selected volumes
     const auto& [box, trafo] = get_bounding_box_in_current_reference_system();
-    render_bounding_box(box, trafo, 
+    const bool auto_drop     = get_auto_drop();
+    render_bounding_box(box, trafo, auto_drop,
         wxGetApp().plater()->canvas3D()->get_canvas_type() == GLCanvas3D::ECanvasType::CanvasAssembleView ? ColorRGB::YELLOW(): ColorRGB::WHITE());
     render_synchronized_volumes();
 }
@@ -2579,86 +2602,128 @@ void Selection::render_synchronized_volumes()
                 box = v.transformed_convex_hull_bounding_box(v.get_volume_transformation().get_matrix());
                 trafo = v.get_instance_transformation().get_matrix();
             }
-            render_bounding_box(box, trafo, ColorRGB::YELLOW());
+            const bool auto_drop = get_auto_drop();
+            render_bounding_box(box, trafo, auto_drop, ColorRGB::YELLOW());
         }
     }
 }
 
-void Selection::render_bounding_box(const BoundingBoxf3& box, const Transform3d& trafo, const ColorRGB& color)
+void Selection::render_bounding_box(const BoundingBoxf3& box, const Transform3d& trafo, const bool auto_drop, const ColorRGB& color)
 {
     const BoundingBoxf3& curr_box = m_box.get_bounding_box();
+    const bool curr_auto_drop = m_auto_drop;
 
-    if (!m_box.is_initialized() || !is_approx(box.min, curr_box.min) || !is_approx(box.max, curr_box.max)) {
+    if (!m_box.is_initialized() || !is_approx(box.min, curr_box.min) || !is_approx(box.max, curr_box.max) || curr_auto_drop != auto_drop) {
         m_box.reset();
+        m_auto_drop = auto_drop;
 
         const Vec3f b_min = box.min.cast<float>();
         const Vec3f b_max = box.max.cast<float>();
         const Vec3f size = 0.2f * box.size().cast<float>();
 
+        // 48 brackets + (24 if auto_drop == false)
+        int total_vertices = 48 + (auto_drop ? 0 : 24);
+
         GLModel::Geometry init_data;
         init_data.format = { GLModel::Geometry::EPrimitiveType::Lines, GLModel::Geometry::EVertexLayout::P3 };
-        init_data.reserve_vertices(48);
-        init_data.reserve_indices(48);
+        init_data.reserve_vertices(total_vertices);
+        init_data.reserve_indices(total_vertices);
 
         // vertices
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y() + size.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_min.z() + size.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y() + size.y(), b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_min.z() + size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y() + size.y(), b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_min.z() + size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y() - size.y(), b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_min.z() + size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y() - size.y(), b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_min.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_min.z() + size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y() + size.y(), b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_min.y(),            b_max.z() - size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y() + size.y(), b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_min.y(),            b_max.z() - size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y() - size.y(), b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_max.x(),            b_max.y(),            b_max.z() - size.z()));
+                                                                               
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y() - size.y(), b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_max.z()));
+        init_data.add_vertex(Vec3f(b_min.x(),            b_max.y(),            b_max.z() - size.z()));
 
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y() + size.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_min.z() + size.z()));
+        // Indicate that auto_drop == false, by drawing an arrow on bottom corners
+        if (!auto_drop) {
+            float visual_scale = m_scale_factor;
+            float head_s       = 2.0f * visual_scale; // Width of the arrowhead wings
+            float z_gap        = 1.0f * visual_scale; // Gap between box and arrow tip
+            float arrow_h      = 5.0f * visual_scale; // Total height of the arrow stem
 
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y() - size.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_min.z() + size.z()));
+            // 4 bottom corners
+            std::vector<Vec3f> corners = {{b_min.x(), b_min.y(), b_min.z()},
+                                          {b_max.x(), b_min.y(), b_min.z()},
+                                          {b_max.x(), b_max.y(), b_min.z()},
+                                          {b_min.x(), b_max.y(), b_min.z()}};
 
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y() - size.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_min.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_min.z() + size.z()));
+            for (const auto& pt : corners) {
+                Vec3f tip = {pt.x(), pt.y(), pt.z() - z_gap};
+                Vec3f base = {pt.x(), pt.y(), tip.z() - arrow_h};
 
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y() + size.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_min.y(), b_max.z() - size.z()));
+                // Stem
+                init_data.add_vertex(base);
+                init_data.add_vertex(tip);
 
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y() + size.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_min.y(), b_max.z() - size.z()));
+                // Wings
+                // Determine direction to the center of the footprint
+                float dirX = (pt.x() == b_min.x()) ? head_s : -head_s;
+                float dirY = (pt.y() == b_min.y()) ? head_s : -head_s;
 
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x() - size.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y() - size.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_max.x(), b_max.y(), b_max.z() - size.z()));
+                // Wing 1 (X-Inward)
+                init_data.add_vertex(tip);
+                init_data.add_vertex(Vec3f(tip.x() + dirX, tip.y(), tip.z() - head_s));
 
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x() + size.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y() - size.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_max.z()));
-        init_data.add_vertex(Vec3f(b_min.x(), b_max.y(), b_max.z() - size.z()));
+                // Wing 2 (Y-Inward)
+                init_data.add_vertex(tip);
+                init_data.add_vertex(Vec3f(tip.x(), tip.y() + dirY, tip.z() - head_s));
+            }
+        }
 
-        // indices
-        for (unsigned int i = 0; i < 48; ++i) {
+        // Finalize indices
+        for (unsigned int i = 0; i < init_data.vertices_count(); ++i) {
             init_data.add_index(i);
         }
 

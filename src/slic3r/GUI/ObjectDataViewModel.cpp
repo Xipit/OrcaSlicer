@@ -178,7 +178,6 @@ bool ObjectDataViewModelNode::valid()
 void ObjectDataViewModelNode::sys_color_changed()
 {
     m_printable_icon = m_printable == piUndef ? m_empty_bmp : create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
-    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 }
 
 void ObjectDataViewModelNode::set_icons()
@@ -208,15 +207,6 @@ void ObjectDataViewModelNode::set_printable_icon(PrintIndicator printable)
     m_printable = printable;
     m_printable_icon = m_printable == piUndef ? 
         m_empty_bmp : create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
-}
-
-void ObjectDataViewModelNode::set_auto_drop_icon(AutoDropIndicator auto_drop)
-{
-    if (m_auto_drop == auto_drop)
-        return;
-
-    m_auto_drop      = auto_drop;
-    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 }
 
 void ObjectDataViewModelNode::set_variable_height_icon(VaryHeightIndicator vari_height) {
@@ -322,8 +312,6 @@ void ObjectDataViewModelNode::msw_rescale()
 
     if (m_printable != piUndef)
         m_printable_icon = create_scaled_bitmap(m_printable == piPrintable ? "check_on" : "check_off_focused");
-
-    m_auto_drop_icon = create_scaled_bitmap(m_auto_drop == adEnabled ? "check_on" : "check_off_focused");
 
     m_variable_height_icon = m_variable_height == hiUnVariable ? m_empty_bmp : create_scaled_bitmap("obj_variable_layer_height");
 
@@ -893,57 +881,6 @@ bool ObjectDataViewModel::IsPrintable(const wxDataViewItem& item) const
         return false;
 
     return node->IsPrintable() == piPrintable;
-}
-
-void ObjectDataViewModel::UpdateObjectAutoDrop(wxDataViewItem parent_item)
-{
-    const wxDataViewItem inst_root_item = GetInstanceRootItem(parent_item);
-    if (!inst_root_item)
-        return;
-
-    ObjectDataViewModelNode* inst_root_node = static_cast<ObjectDataViewModelNode*>(inst_root_item.GetID());
-
-    const size_t   child_cnt = inst_root_node->GetChildren().Count();
-    AutoDropIndicator obj_ad    = adDisabled;
-    for (size_t i = 0; i < child_cnt; i++)
-        if (inst_root_node->GetNthChild(i)->IsAutoDrop() & adEnabled) {
-            obj_ad = adEnabled;
-            break;
-        }
-    // and set auto drop state for object_node
-    ObjectDataViewModelNode* obj_node = static_cast<ObjectDataViewModelNode*>(parent_item.GetID());
-    obj_node->set_auto_drop_icon(obj_ad);
-    ItemChanged(parent_item);
-}
-
-// update auto_drop property for all instances from object
-void ObjectDataViewModel::UpdateInstancesAutoDrop(wxDataViewItem parent_item)
-{
-    const wxDataViewItem inst_root_item = GetInstanceRootItem(parent_item);
-    if (!inst_root_item)
-        return;
-
-    ObjectDataViewModelNode* obj_node       = static_cast<ObjectDataViewModelNode*>(parent_item.GetID());
-    const AutoDropIndicator obj_ad      = obj_node->IsAutoDrop();
-
-    ObjectDataViewModelNode* inst_root_node = static_cast<ObjectDataViewModelNode*>(inst_root_item.GetID());
-    const size_t             child_cnt      = inst_root_node->GetChildren().Count();
-
-    for (size_t i = 0; i < child_cnt; i++) {
-        ObjectDataViewModelNode* inst_node = inst_root_node->GetNthChild(i);
-        // and set auto_drop for object_node 
-        inst_node->set_auto_drop_icon(obj_ad);
-        ItemChanged(wxDataViewItem((void*) inst_node));
-    }
-}
-
-bool ObjectDataViewModel::IsAutoDrop(const wxDataViewItem& item) const
-{
-    ObjectDataViewModelNode* node = static_cast<ObjectDataViewModelNode*>(item.GetID());
-    if (!node)
-        return false;
-
-    return node->IsAutoDrop();
 }
 
 bool ObjectDataViewModel::IsVariableHeight(const wxDataViewItem& item) const {
@@ -2361,43 +2298,6 @@ wxDataViewItem ObjectDataViewModel::SetObjectPrintableState(
     ItemChanged(obj_item);
 
     UpdateInstancesPrintable(obj_item);
-
-    return obj_item;
-}
-
-wxDataViewItem ObjectDataViewModel::SetAutoDrop(
-    AutoDropIndicator       ad,
-    int                     obj_idx,
-    int                     subobj_idx /* = -1*/,
-    ItemType                subobj_type /* = itInstance*/)
-{
-    wxDataViewItem item = wxDataViewItem(0);
-    if (subobj_idx < 0)
-        item = GetItemById(obj_idx);
-    else
-        item = subobj_type & itInstance ? GetItemByInstanceId(obj_idx, subobj_idx) : GetItemByVolumeId(obj_idx, subobj_idx);
-
-    ObjectDataViewModelNode* node = static_cast<ObjectDataViewModelNode*>(item.GetID());
-    if (!node)
-        return wxDataViewItem(0);
-    node->set_auto_drop_icon(ad);
-    ItemChanged(item);
-
-    if (subobj_idx >= 0)
-        UpdateObjectAutoDrop(GetItemById(obj_idx));
-
-    return item;
-}
-
-wxDataViewItem ObjectDataViewModel::SetObjectAutoDrop(AutoDropIndicator ad, wxDataViewItem obj_item)
-{
-    ObjectDataViewModelNode* node = static_cast<ObjectDataViewModelNode*>(obj_item.GetID());
-    if (!node)
-        return wxDataViewItem(0);
-    node->set_auto_drop_icon(ad);
-    ItemChanged(obj_item);     
-
-    UpdateInstancesAutoDrop(obj_item);
 
     return obj_item;
 }

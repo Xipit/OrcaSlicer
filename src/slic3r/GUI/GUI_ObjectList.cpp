@@ -1760,7 +1760,7 @@ void ObjectList::key_event(wxKeyEvent& event)
     else if (event.GetUnicodeKey() == 'p')
         toggle_printable_state();
     else if (event.GetUnicodeKey() == 'd')
-        toggle_auto_drop_enabled();
+        toggle_auto_drop();
     else if (filaments_count() > 1) {
         std::vector<wxChar> numbers = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
         wxChar key_char = event.GetUnicodeKey();
@@ -6491,18 +6491,7 @@ void ObjectList::toggle_printable_state()
     wxGetApp().plater()->reload_paint_after_background_process_apply();
 }
 
-void ObjectList::update_auto_drop_enabled(int obj_idx, int instance_idx)
-{
-    ModelObject* object = (*m_objects)[obj_idx];
-
-    const AutoDropIndicator eob = object->instances[instance_idx]->auto_drop ? adEnabled : adDisabled;
-    if (object->instances.size() == 1)
-        instance_idx = -1;
-
-    m_objects_model->SetAutoDrop(eob, obj_idx, instance_idx);
-}
-
-void ObjectList::toggle_auto_drop_enabled()
+void ObjectList::toggle_auto_drop()
 {
     wxDataViewItemArray sels;
     GetSelections(sels);
@@ -6539,9 +6528,6 @@ void ObjectList::toggle_auto_drop_enabled()
         } else
             for (auto inst : obj->instances)
                 inst->auto_drop = enabled;
-
-        // update auto_drop state in ObjectList
-        m_objects_model->SetObjectAutoDrop(enabled ? adEnabled : adDisabled, item);
                 
         if (enabled) 
             obj->ensure_on_bed();

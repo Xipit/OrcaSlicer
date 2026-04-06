@@ -643,7 +643,6 @@ void Selection::set_auto_drop(bool enabled)
         ModelObject* object = m_model->objects[i.first];
         for (auto inst : object->instances)
             inst->auto_drop = enabled;
-        wxGetApp().obj_list()->update_auto_drop_enabled(i.first, i.second);
     }
 
     // update scene

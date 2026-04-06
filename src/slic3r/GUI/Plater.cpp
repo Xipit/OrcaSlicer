@@ -4468,7 +4468,7 @@ struct Plater::priv
     void drop_selection();
     void mirror(Axis axis);
     void split_object(bool auto_drop = true);
-    void split_object(int obj_idx, bool autodrop = true);
+    void split_object(int obj_idx, bool auto_drop = true);
     void split_volume();
     void scale_selection_to_fit_print_volume();
 
@@ -7430,14 +7430,14 @@ void Plater::find_new_position(const ModelInstancePtrs &instances)
 }
 
 // split selected object into multiple objects by its volumes
-void Plater::priv::split_object(bool autodrop /* = true */)
+void Plater::priv::split_object(bool auto_drop /* = true */)
 { 
     int obj_idx = get_selected_object_idx();
-    priv::split_object(obj_idx, autodrop);
+    priv::split_object(obj_idx, auto_drop);
 }
 
 // split provided object into multiple objects by its volumes
-void Plater::priv::split_object(int obj_idx, bool autodrop /* = true */)
+void Plater::priv::split_object(int obj_idx, bool auto_drop /* = true */)
 {
     if (obj_idx == -1)
         return;
@@ -7471,7 +7471,7 @@ void Plater::priv::split_object(int obj_idx, bool autodrop /* = true */)
             }
             return false;
         };
-        bool split_auto_drop = autodrop;
+        bool split_auto_drop = auto_drop;
         if (current_model_object->instances[0]->auto_drop && is_atleast_one_floating()) {
             MessageDialog dlg(q, _L("Disable Auto-Drop to preserve z positioning?\n"),
                                   _L("Object with floating parts was detected"), wxICON_QUESTION | wxYES_NO);

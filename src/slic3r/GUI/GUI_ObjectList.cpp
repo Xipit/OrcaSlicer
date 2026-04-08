@@ -6498,39 +6498,35 @@ void ObjectList::toggle_auto_drop()
     if (sels.IsEmpty())
         return;
 
-    wxDataViewItem frst_item = sels[0];
+    for (auto item : sels) {
+        ItemType type = m_objects_model->GetItemType(item);
+        if (!(type & (itObject | itInstance)))
+            return;
+    }
 
-    ItemType type = m_objects_model->GetItemType(frst_item);
-    if (!(type & (itObject | itInstance)))
-        return;
-
-    int  obj_idx   = m_objects_model->GetObjectIdByItem(frst_item);
-    int  inst_idx  = type == itObject ? 0 : m_objects_model->GetInstanceIdByItem(frst_item);
-    bool enabled   = !object(obj_idx)->instances[inst_idx]->auto_drop;
+    const bool current_auto_drop = wxGetApp().plater()->get_selection().get_auto_drop();
 
     take_snapshot("");
 
     std::vector<size_t> obj_idxs;
     for (auto item : sels) {
-        type = m_objects_model->GetItemType(item);
-        if (!(type & (itObject | itInstance)))
-            continue;
-
-        obj_idx          = m_objects_model->GetObjectIdByItem(item);
+        int obj_idx      = m_objects_model->GetObjectIdByItem(item);
         ModelObject* obj = object(obj_idx);
 
         obj_idxs.emplace_back(static_cast<size_t>(obj_idx));
 
+        ItemType type = m_objects_model->GetItemType(item);
         // set auto_drop value for selected instance/instances in object
         if (type == itInstance) {
-            inst_idx = m_objects_model->GetInstanceIdByItem(item);
-            obj->instances[m_objects_model->GetInstanceIdByItem(item)]->auto_drop = enabled;
-        } else
+            int inst_idx = m_objects_model->GetInstanceIdByItem(item);
+            obj->instances[inst_idx]->auto_drop = !current_auto_drop;
+        } else {
             for (auto inst : obj->instances)
-                inst->auto_drop = enabled;
+                inst->auto_drop = !current_auto_drop;
                 
-        if (enabled) 
+        if (current_auto_drop == false) 
             obj->ensure_on_bed();
+        }
     }
 
     sort(obj_idxs.begin(), obj_idxs.end());

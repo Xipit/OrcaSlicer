@@ -238,7 +238,7 @@ public:
     void drop();
     void center_plate(const int plate_idx);
     void set_printable(bool printable);
-    bool get_auto_drop();
+    bool get_auto_drop() const;
     void set_auto_drop(bool enabled);
 
     void add_all();

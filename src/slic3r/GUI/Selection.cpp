@@ -574,11 +574,9 @@ void Selection::set_printable(bool printable)
         return;
 
     std::set<std::pair<int, int>> instances_idxs;
-    for (ObjectIdxsToInstanceIdxsMap::iterator obj_it = m_cache.content.begin(); obj_it != m_cache.content.end(); ++obj_it)
-    {
-        for (InstanceIdxsList::reverse_iterator inst_it = obj_it->second.rbegin(); inst_it != obj_it->second.rend(); ++inst_it)
-        {
-            instances_idxs.insert(std::make_pair(obj_it->first, *inst_it));
+    for (const auto& [obj_idx, inst_list] : m_cache.content) {
+        for (int inst_idx : inst_list) {
+            instances_idxs.insert({obj_idx, inst_idx});
         }
     }
 
@@ -586,38 +584,40 @@ void Selection::set_printable(bool printable)
     wxGetApp().plater()->take_snapshot(snapshot_text);
 
     // set printable value for all instances in object
-    for (const std::pair<int, int>& i : instances_idxs)
+    for (const auto& [obj_idx, inst_idx] : instances_idxs)
     {
-        ModelObject* object = m_model->objects[i.first];
+        ModelObject* object = m_model->objects[obj_idx];
         for (auto inst : object->instances)
             inst->printable = printable;
-        wxGetApp().obj_list()->update_printable_state(i.first, i.second);
+        wxGetApp().obj_list()->update_printable_state(obj_idx, inst_idx);
 
         //update printable state on canvas
-        wxGetApp().plater()->canvas3D()->update_instance_printable_state_for_object((size_t)i.first);
+        wxGetApp().plater()->canvas3D()->update_instance_printable_state_for_object((size_t) obj_idx);
     }
 
     // update scene
     wxGetApp().plater()->update();
 }
 
-bool Selection::get_auto_drop() {
+bool Selection::get_auto_drop() const {
     if (!m_valid)
         return true;
 
     std::set<std::pair<int, int>> instances_idxs;
-    for (ObjectIdxsToInstanceIdxsMap::iterator obj_it = m_cache.content.begin(); obj_it != m_cache.content.end(); ++obj_it) {
-        for (InstanceIdxsList::reverse_iterator inst_it = obj_it->second.rbegin(); inst_it != obj_it->second.rend(); ++inst_it) {
-            instances_idxs.insert(std::make_pair(obj_it->first, *inst_it));
+    for (const auto& [obj_idx, inst_list] : m_cache.content) {
+        for (int inst_idx : inst_list) {
+            instances_idxs.insert({obj_idx, inst_idx});
         }
     }
 
     // return false, if one of the instances in the selection has auto_drop disabled, otherwise return true
-    for (const std::pair<int, int>& i : instances_idxs) {
-        ModelObject* object = m_model->objects[i.first];
-        for (auto inst : object->instances)
-            if (inst->auto_drop == false)
+    for (const auto& [obj_idx, inst_idx] : instances_idxs) {
+        ModelObject* object = m_model->objects[obj_idx];
+        for (const auto* inst : object->instances) {
+            if (!inst->auto_drop) {
                 return false;
+            }
+        }
     }
 
     return true;
@@ -629,20 +629,21 @@ void Selection::set_auto_drop(bool enabled)
         return;
 
     std::set<std::pair<int, int>> instances_idxs;
-    for (ObjectIdxsToInstanceIdxsMap::iterator obj_it = m_cache.content.begin(); obj_it != m_cache.content.end(); ++obj_it) {
-        for (InstanceIdxsList::reverse_iterator inst_it = obj_it->second.rbegin(); inst_it != obj_it->second.rend(); ++inst_it) {
-            instances_idxs.insert(std::make_pair(obj_it->first, *inst_it));
+    for (const auto& [obj_idx, inst_list] : m_cache.content) {
+        for (int inst_idx : inst_list) {
+            instances_idxs.insert({obj_idx, inst_idx});
         }
     }
 
-    std::string snapshot_text = (boost::format("%1%") % (enabled ? "Set Selection Snap to Buildplate Enabled" : "Set Selection Snap to Buildplate Disabled")).str();
+    std::string snapshot_text = (boost::format("%1%") % (enabled ? "Set Selection Auto-Drop Enabled" : "Set Selection Auto-Drop Disabled")).str();
     wxGetApp().plater()->take_snapshot(snapshot_text);
 
     // set auto_drop value for all instances in object
-    for (const std::pair<int, int>& i : instances_idxs) {
-        ModelObject* object = m_model->objects[i.first];
-        for (auto inst : object->instances)
+    for (const auto& [obj_idx, inst_idx] : instances_idxs) {
+        ModelObject* object = m_model->objects[obj_idx];
+        for (auto* inst : object->instances) {
             inst->auto_drop = enabled;
+        }
     }
 
     // update scene

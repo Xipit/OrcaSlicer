@@ -1166,6 +1166,7 @@ void ObjectList::update_name_in_list(int obj_idx, int vol_idx) const
 
 void ObjectList::selection_changed()
 {
+    if (wxGetApp().is_closing()) return;
     if (m_prevent_list_events) return;
 
     fix_multiselection_conflicts();
@@ -3485,6 +3486,9 @@ void ObjectList::changed_object(const int obj_idx/* = -1*/) const
 
 void ObjectList::part_selection_changed()
 {
+    if (wxGetApp().is_closing())
+        return;
+
     if (m_extruder_editor) m_extruder_editor->Hide();
     int obj_idx = -1;
     int volume_id = -1;
@@ -4685,6 +4689,9 @@ int ObjectList::get_selected_layers_range_idx() const
 
 void ObjectList::update_selections()
 {
+    if (wxGetApp().is_closing())
+        return;
+
     const Selection& selection = scene_selection();
     wxDataViewItemArray sels;
 

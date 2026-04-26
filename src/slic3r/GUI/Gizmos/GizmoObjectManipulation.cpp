@@ -62,16 +62,21 @@ GizmoObjectManipulation::GizmoObjectManipulation(GLCanvas3D& glcanvas)
 
     m_shortcuts_move = {
         {alt + _L("Left mouse button"),     _L("Part selection")},
-        {shift + _L("Left mouse button"),   _L("Fixed step drag")}
+        {shift + _L("Left mouse button"),   _L("Fixed step drag")},
+        {_L("Context Menu"),                _L("Toggle Auto-Drop")}
     };
 
     m_shortcuts_rotate = {
-        {alt + _L("Left mouse button"),     _L("Part selection")}};
+        {alt + _L("Left mouse button"),     _L("Part selection")},
+        {_L("Context Menu"),                _L("Toggle Auto-Drop")}
+    };
 
     m_shortcuts_scale = {
         {alt + _L("Left mouse button"),     _L("Part selection")},
         {shift + _L("Left mouse button"),   _L("Fixed step drag")},
-        {ctrl + _L("Left mouse button"),    _L("Single sided scaling")}};
+        {ctrl + _L("Left mouse button"),    _L("Single sided scaling")},
+        {_L("Context Menu"),                _L("Toggle Auto-Drop")}
+    };
 }
 
 void GizmoObjectManipulation::UpdateAndShow(const bool show)

@@ -195,6 +195,7 @@ wxDECLARE_EVENT(EVT_CUSTOMEVT_TICKSCHANGED, wxCommandEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_RESET_LAYER_HEIGHT_PROFILE, SimpleEvent);
 wxDECLARE_EVENT(EVT_GLCANVAS_ADAPTIVE_LAYER_HEIGHT_PROFILE, Event<float>);
 wxDECLARE_EVENT(EVT_GLCANVAS_SMOOTH_LAYER_HEIGHT_PROFILE, HeightProfileSmoothEvent);
+wxDECLARE_EVENT(EVT_GLCANVAS_PRINTABLE, SimpleEvent);
 
 class GLCanvas3D
 {
@@ -289,8 +290,8 @@ class GLCanvas3D
         bool is_enabled() const { return m_enabled; }
         void set_enabled(bool enabled) { m_enabled = is_allowed() && enabled; }
 
-        void render_variable_layer_height_dialog(const GLCanvas3D& canvas);
-        void render_overlay(const GLCanvas3D& canvas);
+        void render_variable_layer_height_dialog(GLCanvas3D& canvas);
+        void render_overlay(GLCanvas3D& canvas);
         void render_volumes(const GLCanvas3D& canvas, const GLVolumeCollection& volumes);
 
         void adjust_layer_height_profile();
@@ -380,14 +381,13 @@ class GLCanvas3D
         ToolHeightOutside,
         TPUPrintableError,
         FilamentPrintableError,
-        LeftExtruderPrintableError,         // before slice
-        RightExtruderPrintableError,        // before slice
-        MultiExtruderPrintableError,        // after slice
-        MultiExtruderHeightOutside,         // after slice
+        LeftExtruderPrintableError, // before slice
+        RightExtruderPrintableError, // before slice
+        MultiExtruderPrintableError,      // after slice
+        MultiExtruderHeightOutside,       // after slice
         FilamentUnPrintableOnFirstLayer,
         MixUsePLAAndPETG,
-        PrimeTowerOutside,                  // after slice
-        PreviewPrimeTowerOutside,           // before slice 
+        PrimeTowerOutside,
         NozzleFilamentIncompatible,
         MixtureFilamentIncompatible,
         FlushingVolumeZero
@@ -955,7 +955,7 @@ public:
                                              Camera::ViewAngleType              camera_view_angle_type = Camera::ViewAngleType::Iso,
                                              bool                               for_picking  = false,
                                              bool                               ban_light    = false);
-    // render thumbnail using an off-screen framebuffer when GLEW_EXT_framebuffer_object is supported
+    // render thumbnail using an off-screen framebuffer when GL_EXT_framebuffer_object is supported
     static void render_thumbnail_framebuffer_ext(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, const ThumbnailsParams& thumbnail_params,
         PartPlateList& partplate_list, ModelObjectPtrs& model_objects, const GLVolumeCollection& volumes, std::vector<ColorRGBA>& extruder_colors,
                                                  GLShaderProgram *                  shader,
@@ -1115,7 +1115,7 @@ public:
 
     void request_extra_frame() { m_extra_frame_requested = true; }
 
-    void schedule_extra_frame(int miliseconds);
+    void schedule_extra_frame(int milliseconds);
 
     int get_main_toolbar_item_id(const std::string& name) const { return m_main_toolbar.get_item_id(name); }
     void force_main_toolbar_left_action(int item_id) { m_main_toolbar.force_left_action(item_id, *this); }

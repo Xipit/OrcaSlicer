@@ -710,6 +710,7 @@ int SidebarProps::ElementSpacing() { return 5; }  // Use if elements has relatio
 #pragma once
 
 #include <wx/wx.h>
+#include <wx/filename.h>
 #include <vector>
 
 class CustomNotebook : public wxControl
@@ -9400,8 +9401,9 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                     }
                     const std::vector<std::string> extruder_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config(nullptr,
                                                                                                                                   false);
+                    const std::string obj_basename = wxFileName(wxString::FromUTF8(path.string())).GetFullName().ToStdString();
                     ObjColorDialog color_dlg(nullptr, input_colors, is_single_color, import_context, extruder_colours, filament_ids,
-                                             first_extruder_id);
+                                             first_extruder_id, obj_basename);
                     if (is_user_cancel) {
                         filament_ids.clear();
                         return;
@@ -11461,8 +11463,9 @@ void Plater::priv::reload_from_disk()
                 return;
             }
             const std::vector<std::string> extruder_colours = wxGetApp().plater()->get_extruder_colors_from_plater_config(nullptr, false);
+            const std::string obj_basename2 = wxFileName(wxString::FromUTF8(path)).GetFullName().ToStdString();
             ObjColorDialog                 color_dlg(nullptr, input_colors, is_single_color, import_context, extruder_colours, filament_ids,
-                                                     first_extruder_id);
+                                                     first_extruder_id, obj_basename2);
             if (color_dlg.ShowModal() != wxID_OK) {
                 filament_ids.clear();
             }

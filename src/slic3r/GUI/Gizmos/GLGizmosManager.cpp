@@ -363,6 +363,8 @@ bool GLGizmosManager::init_icon_textures()
         return false;
 
     for (const auto& [icon, name] : std::initializer_list<std::pair<MENU_ICON_NAME, const char*>>{
+             { IC_CANVAS_TOOLTIP, "canvas_tooltip" }, { IC_CANVAS_TOOLTIP_HOVER, "canvas_tooltip_hover" },
+             { IC_CANVAS_TOOLTIP_DARK, "canvas_tooltip_dark" }, { IC_CANVAS_TOOLTIP_DARK_HOVER, "canvas_tooltip_dark_hover" },
              { IC_CANVAS_SECTION, "canvas_section" }, { IC_CANVAS_SECTION_HOVER, "canvas_section_hover" },
              { IC_CANVAS_SECTION_DARK, "canvas_section_dark" }, { IC_CANVAS_SECTION_DARK_HOVER, "canvas_section_dark_hover" },
              { IC_CANVAS_SECTION_ACTIVE, "canvas_section_active" }, { IC_CANVAS_SECTION_ACTIVE_HOVER, "canvas_section_active_hover" },

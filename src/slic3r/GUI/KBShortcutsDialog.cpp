@@ -212,6 +212,11 @@ void KBShortcutsDialog::fill_pages()
     }
 
     page(_L("Preview"), _L("Available while the 3D view on the Preview tab has focus."), ShortcutContext::Preview, {
+        fixed(Section::Sliders, { left_button }, L("Go to layer")),
+        fixed(Section::Sliders, { shift, left_button }, L("Go to line in layer")),
+        fixed(Section::Sliders, { shift, wheel }, L("Scroll through layers")),
+        fixed(Section::Sliders, { ctrl, wheel }, L("Scroll through lines in layer")),
+        fixed(Section::Sliders, { esc }, L("Reset sliders")),
         fixed(Section::Sliders, { shift_ctrl, any_key }, L("Move slider 5x faster")),
         fixed(Section::Sliders, { shift_ctrl, wheel }, L("Scroll slider 5x faster")),
         fixed(Section::Display, { alt, wheel }, L("Move section plane")),

@@ -2477,7 +2477,7 @@ static float canvas_corner_height()
 {
     if (wxGetApp().show_3d_navigator())
         return NAVIGATOR_SIZE;
-    const int buttons = wxGetApp().show_canvas_zoom_button() ? 3 : 2;
+    const int buttons = 2 + (wxGetApp().show_canvas_zoom_button() ? 1 : 0) + (wxGetApp().show_canvas_tooltip_button() ? 1 : 0);
     return CANVAS_TOOLBAR_MARGIN + 2.f * CANVAS_TOOLBAR_PADDING + buttons * CANVAS_TOOLBAR_BUTTON + (buttons - 1) * CANVAS_TOOLBAR_SPACING;
 }
 
@@ -11217,7 +11217,8 @@ void GLCanvas3D::_render_canvas_toolbar()
         m_canvas_toolbar_pos[0]        + margin.x,
         get_canvas_size().get_height() - margin.y
     };
-    bool          zoom_btn = wxGetApp().show_canvas_zoom_button();
+    bool          zoom_btn    = wxGetApp().show_canvas_zoom_button();
+    bool          tooltip_btn = wxGetApp().show_canvas_tooltip_button();
 
     imgui.set_next_window_pos(pos[0], pos[1], ImGuiCond_Always, 0, 1); // pivot bottom-left
 
@@ -11258,7 +11259,8 @@ void GLCanvas3D::_render_canvas_toolbar()
 
     if (ImGui::ImageButton3(m_normal_id, m_hover_id, btn_size)) {
         if(!ImGui::IsPopupOpen("CanvasToolbarMenu")){
-            ImGui::SetNextWindowPos(ImVec2(pos[0] + padding.x, pos[1] - padding.y - (zoom_btn ? (btn_size.y + spacing.y) : 0.f)), ImGuiCond_Always, ImVec2(0, 1)); // pivot bottom-left
+            const int lower_btns = (zoom_btn ? 1 : 0) + (tooltip_btn ? 1 : 0);
+            ImGui::SetNextWindowPos(ImVec2(pos[0] + padding.x, pos[1] - padding.y - lower_btns * (btn_size.y + spacing.y)), ImGuiCond_Always, ImVec2(0, 1)); // pivot bottom-left
             ImGui::OpenPopup("CanvasToolbarMenu");
         }
     }
@@ -11296,6 +11298,21 @@ void GLCanvas3D::_render_canvas_toolbar()
 
             float width = ImGui::CalcTextSize(tooltip_str.c_str()).x + imgui.scaled(2.0f);
             imgui.tooltip(tooltip_str, width);
+        }
+    }
+
+    bool   show_tooltip = false;
+    ImVec2 tooltip_bottom_left;
+    if (tooltip_btn) {
+        ImGui::Dummy({ 0, spacing.y });
+
+        ImTextureID t_normal_id = m_gizmos.get_icon_texture_id(m_is_dark ? GLGizmosManager::MENU_ICON_NAME::IC_CANVAS_TOOLTIP_DARK       : GLGizmosManager::MENU_ICON_NAME::IC_CANVAS_TOOLTIP);
+        ImTextureID t_hover_id  = m_gizmos.get_icon_texture_id(m_is_dark ? GLGizmosManager::MENU_ICON_NAME::IC_CANVAS_TOOLTIP_DARK_HOVER : GLGizmosManager::MENU_ICON_NAME::IC_CANVAS_TOOLTIP_HOVER);
+
+        ImGui::ImageButton3(t_normal_id, t_hover_id, btn_size);
+        if (ImGui::IsItemHovered()) {
+            show_tooltip        = true;
+            tooltip_bottom_left = ImVec2(ImGui::GetItemRectMax().x + spacing.x, ImGui::GetItemRectMax().y);
         }
     }
 
@@ -11349,6 +11366,15 @@ void GLCanvas3D::_render_canvas_toolbar()
             wxGetApp().show_canvas_zoom_button(),
             []{
                 wxGetApp().toggle_canvas_zoom_button();
+                ImGui::CloseCurrentPopup(); // Close popup to show changes on UI
+            }
+        );
+
+        create_menu_item( _utf8(L("Tooltip button")),
+            true, // work on all
+            wxGetApp().show_canvas_tooltip_button(),
+            []{
+                wxGetApp().toggle_canvas_tooltip_button();
                 ImGui::CloseCurrentPopup(); // Close popup to show changes on UI
             }
         );
@@ -11465,6 +11491,87 @@ void GLCanvas3D::_render_canvas_toolbar()
     imgui.end();
 
     _render_section_view_panel(section_panel_pos);
+    if (show_tooltip)
+        _render_canvas_tooltip(tooltip_bottom_left);
+}
+
+void GLCanvas3D::_render_canvas_tooltip(const ImVec2& bottom_left) const
+{
+    ImGuiWrapper& imgui = *wxGetApp().imgui();
+    const float   sc    = get_scale();
+
+    ImGuiWrapper::push_toolbar_style(sc);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.f * sc);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.f, 8.f) * sc);
+
+    const wxString ctrl  = GUI::shortkey_ctrl_prefix();
+    const wxString alt   = GUI::shortkey_alt_prefix();
+    const wxString shift = GUI::shortkey_shift_prefix();
+    const wxString esc   = _L_CONTEXT("Esc", "Keyboard Shortcut");
+    const wxString lmb   = _L("Left mouse button");
+    const wxString wheel = _L("Mouse wheel");
+
+    std::vector<std::pair<wxString, wxString>> tips;
+
+    const AppConfig* app_config = wxGetApp().app_config;
+    auto add_drag_tip = [&tips, app_config](const wxString& button, const char* preference) {
+        if (app_config == nullptr)
+            return;
+        const std::string action = app_config->get(preference);
+        if (action == "1")
+            tips.emplace_back(button, _L("Pan View"));
+        else if (action == "2")
+            tips.emplace_back(button, _L("Rotate View"));
+    };
+    add_drag_tip(_L("Left Mouse Drag"),   "left_mouse_drag_action");
+    add_drag_tip(_L("Middle Mouse Drag"), "middle_mouse_drag_action");
+    add_drag_tip(_L("Right Mouse Drag"),  "right_mouse_drag_action");
+    tips.emplace_back(wheel,       _L("Zoom View"));
+    tips.emplace_back(alt + wheel, _L("Move section plane"));
+
+    if (m_canvas_type == ECanvasType::CanvasPreview) {
+        const wxString up    = _L_CONTEXT("Up", "Keyboard Shortcut");
+        const wxString down  = _L_CONTEXT("Down", "Keyboard Shortcut");
+        const wxString left  = _L_CONTEXT("Left", "Keyboard Shortcut");
+        const wxString right = _L_CONTEXT("Right", "Keyboard Shortcut");
+
+        tips.emplace_back(lmb,                _L("Go to layer"));
+        tips.emplace_back(shift + lmb,        _L("Go to line in layer"));
+        tips.emplace_back(shift + wheel,      _L("Scroll through layers"));
+        tips.emplace_back(ctrl + wheel,       _L("Scroll through lines in layer"));
+        tips.emplace_back(up + "/" + down,    _L("Step through layers"));
+        tips.emplace_back(left + "/" + right, _L("Step through lines in layer"));
+        tips.emplace_back(esc,                _L("Reset sliders"));
+    } else if (m_canvas_type == ECanvasType::CanvasAssembleView) {
+        tips.emplace_back(lmb,                    _L("Object selection"));
+        tips.emplace_back(alt + lmb,              _L("Part selection"));
+        tips.emplace_back(ctrl + wheel,           _L("Explosion Ratio"));
+        tips.emplace_back(_L("1~16 number keys"), _L("Number keys can quickly change the color of objects"));
+    } else {
+        tips.emplace_back(lmb,         _L("Object selection"));
+        tips.emplace_back(alt + lmb,   _L("Part selection"));
+        tips.emplace_back(ctrl + lmb,  _L("Select multiple objects"));
+        tips.emplace_back(shift + lmb, _L("Select objects by rectangle"));
+        tips.emplace_back(esc,         _L("Deselect All"));
+    }
+
+    float caption_x_max = 0.f;
+    for (const auto& item : tips)
+        caption_x_max = std::max(caption_x_max, imgui.calc_text_size(item.first).x);
+    caption_x_max += imgui.calc_text_size(": "sv).x + 35.f;
+
+    const ImGuiStyle& style  = ImGui::GetStyle();
+    const float       tips_h = tips.size() * (ImGui::GetTextLineHeight() + style.ItemSpacing.y) - style.ItemSpacing.y + 2.f * style.WindowPadding.y;
+    ImGui::BeginTooltip2(ImVec2(bottom_left.x, std::max(0.f, bottom_left.y - tips_h)));
+    for (const auto& item : tips) {
+        imgui.text_colored(ImGuiWrapper::COL_ACTIVE, item.first + ": ");
+        ImGui::SameLine(caption_x_max);
+        imgui.text_colored(ImGuiWrapper::COL_WINDOW_BG, item.second);
+    }
+    ImGui::EndTooltip();
+
+    ImGui::PopStyleVar(2);
+    ImGuiWrapper::pop_toolbar_style();
 }
 
 void GLCanvas3D::_render_section_view_panel(const ImVec2& bottom_left)

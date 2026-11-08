@@ -462,6 +462,9 @@ public:
     bool show_canvas_zoom_button() const { return app_config->get_bool("show_canvas_zoom_button"); }
     void toggle_canvas_zoom_button() const { app_config->set_bool("show_canvas_zoom_button", !show_canvas_zoom_button()); }
 
+    bool show_canvas_tooltip_button() const { return app_config->get_bool("show_canvas_tooltip_button"); }
+    void toggle_canvas_tooltip_button() const { app_config->set_bool("show_canvas_tooltip_button", !show_canvas_tooltip_button()); }
+
     bool show_outline() const { return app_config->get_bool("show_outline"); }
     void toggle_show_outline() const { app_config->set_bool("show_outline", !show_outline()); }
 
